@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- The exe's file properties show the real version (they said 1.0.0 since the first release). The version now comes from the VERSION file at build time.
+- The demo and the skin editor are in English for everyone (Russian with `?lang=ru`).
+- Links to the site get a proper preview card on Reddit, Discord, Telegram and others.
+
 ## 1.1.0
 
 - Skins: classic, pumpkin, robot, demon, zombie, plus your own from a small .ini file (colors, an accessories layer drawn over every frame, whole frames). See docs/SKINS.md.
