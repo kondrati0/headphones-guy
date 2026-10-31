@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.1
 
 - The exe is stripped: ~290 KB instead of ~830 KB.
 - "Start with Windows" keeps working after you move the exe: the autostart entry follows it on the next launch.
