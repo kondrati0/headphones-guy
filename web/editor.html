@@ -149,7 +149,7 @@ const L = RU ? {
   confirmReset:'Erase everything and start from the classic guy?'
 };
 const $ = id => document.getElementById(id);
-if (RU) document.documentElement.lang = 'ru';
+if (RU) { document.documentElement.lang = 'ru'; $('t-back').href = 'index.html?lang=ru'; }
 for (const [id, k] of [['t-title','title'],['t-back','back'],['t-tab-acc','acc'],['t-tab-colors','colors'],['t-tab-frames','frames'],['t-pen','pen'],['t-fill','fill'],['t-pick','pick'],['mirror','mirror'],['clearLayer','clear'],['t-on','on'],['t-start','start'],['t-extra','extra'],['t-real','real'],['t-name','name'],['install','install'],['download','download'],['load','load'],['reset','reset'],['beat','beat']]) $(id).textContent = L[k];
 document.title = (RU ? 'Чел в наушниках — ' : 'Headphones Guy — ') + L.title.toLowerCase();
 

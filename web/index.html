@@ -102,7 +102,7 @@ const L = RU ? {
   skins:['Classic','Pumpkin','Robot','Demon','Zombie'], hats:['By the date','No hat','Witch hat','Santa hat','Party hat'], bad:"Couldn't open that file"
 };
 const $ = id => document.getElementById(id);
-if (RU) document.documentElement.lang = 'ru';
+if (RU) { document.documentElement.lang = 'ru'; document.querySelector('a[href="editor.html"]').href = 'editor.html?lang=ru'; }
 for (const [id, k] of [['t-title','title'],['t-sub','sub'],['t-drop','drop'],['t-drop2','drop2'],['demo','demo'],['play','pause'],['t-bpm','bpm'],['t-sec','sec'],['t-onbar','onbar'],['t-look','look'],['t-skin','skin'],['t-hat','hat'],['t-draw','draw'],['t-dl','dl'],['t-src','src'],['t-note','note']]) $(id).textContent = L[k];
 document.title = L.title + (RU ? ' — попробуй в браузере' : ' — try it in the browser');
 
