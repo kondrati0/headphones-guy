@@ -9,5 +9,5 @@ WINDRES=${WINDRES:-x86_64-w64-mingw32-windres}
 mkdir -p build
 $WINDRES src/res.rc -O coff -o build/res.o
 $CXX -O2 -s -std=c++17 -Wall -municode -mwindows -static src/main.cpp build/res.o -o build/HeadphonesGuy.exe \
-     -lole32 -luuid -lshell32 -lcomdlg32
+     -lole32 -luuid -lshell32 -lcomdlg32 -lws2_32
 echo "build/HeadphonesGuy.exe is ready"

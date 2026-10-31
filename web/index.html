@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Headphones Guy — try it in the browser</title>
+<meta name="description" content="A tiny pixel smiley that nods to the beat of whatever you play. Drop a track and watch him go.">
+<link rel="icon" href="favicon.png">
+<style>
+  :root { --bg:#141416; --card:#1d1d21; --line:#2c2c32; --text:#ececf0; --muted:#9a9aa3; --accent:#ff5d73; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:40px 20px 60px; }
+  h1 { font-size:30px; font-weight:650; margin:0 0 6px; letter-spacing:-.01em; }
+  .sub { color:var(--muted); margin:0 0 28px; }
+  .stage { display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; }
+  @media (max-width:640px) { .stage { grid-template-columns:1fr; justify-items:center; } }
+  canvas { image-rendering:pixelated; image-rendering:crisp-edges; display:block; }
+  #big { width:224px; height:252px; }
+  .drop { border:1.5px dashed #44444c; border-radius:12px; padding:18px; text-align:center; color:var(--muted); cursor:pointer; transition:border-color .15s, background .15s; }
+  .drop.over, .drop:hover { border-color:var(--accent); background:#ff5d7310; color:var(--text); }
+  .drop b { color:var(--text); font-weight:600; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+  button, select { font:inherit; color:var(--text); background:#26262b; border:1px solid #3a3a42; border-radius:9px; padding:7px 12px; cursor:pointer; }
+  button:hover, select:hover { border-color:#55555f; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#1a0b0e; font-weight:600; }
+  .track { margin-top:16px; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar { height:6px; background:#2a2a30; border-radius:3px; margin-top:8px; cursor:pointer; position:relative; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--accent); border-radius:3px; }
+  .stats { display:flex; gap:22px; margin-top:12px; font-size:14px; color:var(--muted); }
+  .stats b { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+  h2 { font-size:17px; font-weight:600; margin:34px 0 12px; }
+  .taskbar { background:#202022; border-radius:10px; height:48px; display:flex; align-items:center; justify-content:flex-end; gap:14px; padding:0 14px; color:#d6d6da; font-size:12px; border:1px solid var(--line); }
+  .taskbar .ico { width:16px; height:16px; border-radius:3px; background:#3a3a40; }
+  .taskbar .clock { text-align:right; line-height:1.25; }
+  .looks { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .sw { width:26px; height:26px; border-radius:50%; border:2px solid transparent; padding:0; }
+  .sw.on { border-color:#fff; }
+  label { color:var(--muted); font-size:14px; }
+  .cta { display:flex; gap:12px; flex-wrap:wrap; margin-top:34px; }
+  .cta a { text-decoration:none; }
+  .note { color:var(--muted); font-size:13px; margin-top:22px; }
+  a { color:#ff8a9a; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="t-title">Headphones Guy</h1>
+  <p class="sub" id="t-sub">A tiny pixel smiley that lives on your Windows taskbar and nods to whatever you play. Try him here first.</p>
+
+  <section class="stage">
+    <canvas id="big" width="224" height="252" aria-label="Headphones Guy"></canvas>
+    <div style="min-width:0;width:100%">
+      <div class="drop" id="drop" tabindex="0" role="button"><b id="t-drop">Drop an mp3 / wav / flac here</b><br><span id="t-drop2">or click to pick a file. It never leaves your browser.</span></div>
+      <input type="file" id="file" accept="audio/*" hidden>
+      <div class="row">
+        <button id="demo" class="primary" type="button">Play a generated 200 BPM beat</button>
+        <button id="play" type="button" disabled>Pause</button>
+      </div>
+      <div class="track" id="track">&nbsp;</div>
+      <div class="bar" id="bar"><i id="prog"></i></div>
+      <div class="stats"><span><span id="t-bpm">BPM</span> <b id="bpm">–</b></span><span><span id="t-sec">Section</span> <b id="sec">–</b></span></div>
+    </div>
+  </section>
+
+  <h2 id="t-onbar">On your taskbar, real size</h2>
+  <div class="taskbar"><span class="ico"></span><span class="ico"></span><canvas id="small" width="32" height="36"></canvas><span class="ico"></span><span class="clock" id="clock"></span></div>
+
+  <h2 id="t-look">His look</h2>
+  <div class="looks">
+    <label for="skin" id="t-skin">Skin</label><select id="skin"></select>
+    <label for="hat" id="t-hat">Hat</label><select id="hat"></select>
+    <span id="swatches" style="display:flex;gap:6px"></span>
+    <a href="editor.html" style="margin-left:auto"><button type="button" id="t-draw">Draw your own skin</button></a>
+  </div>
+
+  <div class="cta">
+    <a href="https://github.com/kondrati0/headphones-guy/releases/latest/download/HeadphonesGuy.exe"><button class="primary" type="button" id="t-dl">Download for Windows (~400 KB)</button></a>
+    <a href="https://github.com/kondrati0/headphones-guy"><button type="button" id="t-src">Source on GitHub</button></a>
+  </div>
+  <p class="note" id="t-note">The Windows app listens to everything your PC plays (Spotify, YouTube, games) with no setup. This page runs the exact same beat tracker, compiled to WebAssembly.</p>
+</main>
+<script type="module">
+import { RU, loadWasm, makeBeat, Player, blit, hatByDate } from './common.js';
+const L = RU ? {
+  title:'Чел в наушниках', sub:'Пиксельный смайлик, который живёт на панели задач Windows и кивает в бит всему, что играет. Сначала попробуй его тут.',
+  drop:'Кидай сюда mp3 / wav / flac', drop2:'или жми, чтобы выбрать файл. Он никуда не уходит из браузера.',
+  demo:'Включить сгенерированный бит на 200 BPM', pause:'Пауза', resume:'Дальше', bpm:'BPM', sec:'Секция',
+  onbar:'На панели задач, в реальном размере', look:'Внешний вид', skin:'Скин', hat:'Шапка', draw:'Нарисовать свой скин',
+  dl:'Скачать для Windows (~400 КБ)', src:'Исходники на GitHub',
+  note:'Приложение для Windows слушает всё, что играет на компе (Spotify, YouTube, игры), без настройки. Здесь работает тот же самый трекер бита, собранный в WebAssembly.',
+  secs:['кач','громко','тихо','билд-ап','дроп'], silence:'тишина', listening:'слушает', demoName:'Сгенерированный бит · 200 BPM',
+  skins:['Классика','Тыква','Робот','Демон','Зомби'], hats:['По дате','Без шапки','Шляпа ведьмы','Шапка Санты','Праздничный колпак'], bad:'Не получилось открыть этот файл'
+} : {
+  title:'Headphones Guy', sub:'A tiny pixel smiley that lives on your Windows taskbar and nods to whatever you play. Try him here first.',
+  drop:'Drop an mp3 / wav / flac here', drop2:'or click to pick a file. It never leaves your browser.',
+  demo:'Play a generated 200 BPM beat', pause:'Pause', resume:'Resume', bpm:'BPM', sec:'Section',
+  onbar:'On your taskbar, real size', look:'His look', skin:'Skin', hat:'Hat', draw:'Draw your own skin',
+  dl:'Download for Windows (~400 KB)', src:'Source on GitHub',
+  note:'The Windows app listens to everything your PC plays (Spotify, YouTube, games) with no setup. This page runs the exact same beat tracker, compiled to WebAssembly.',
+  secs:['groove','loud','quiet','build-up','drop'], silence:'silence', listening:'listening', demoName:'Generated beat · 200 BPM',
+  skins:['Classic','Pumpkin','Robot','Demon','Zombie'], hats:['By the date','No hat','Witch hat','Santa hat','Party hat'], bad:"Couldn't open that file"
+};
+const $ = id => document.getElementById(id);
+if (RU) document.documentElement.lang = 'ru';
+for (const [id, k] of [['t-title','title'],['t-sub','sub'],['t-drop','drop'],['t-drop2','drop2'],['demo','demo'],['play','pause'],['t-bpm','bpm'],['t-sec','sec'],['t-onbar','onbar'],['t-look','look'],['t-skin','skin'],['t-hat','hat'],['t-draw','draw'],['t-dl','dl'],['t-src','src'],['t-note','note']]) $(id).textContent = L[k];
+document.title = L.title + (RU ? ' — попробуй в браузере' : ' — try it in the browser');
+
+const CUPS = [0xFF5D73, 0xE53935, 0xFF8C1A, 0x3CCB5A, 0x3DB8FF, 0x3D5DFF, 0x9B5DE5, 0xF2F2F2];
+const SKIN_CUPS = [null, null, 0x3DB8FF, 0x222222, 0x9B5DE5];
+let cups = CUPS[0], skin = 0, hatMode = -1;
+L.skins.forEach((n, i) => $('skin').add(new Option(n, i)));
+L.hats.forEach((n, i) => $('hat').add(new Option(n, i - 1)));
+function drawSwatches() {
+  $('swatches').innerHTML = '';
+  for (const c of CUPS) { const b = document.createElement('button'); b.className = 'sw' + (c === cups ? ' on' : ''); b.type = 'button';
+    b.style.background = '#' + c.toString(16).padStart(6, '0'); b.setAttribute('aria-label', '#' + c.toString(16)); b.onclick = () => { cups = c; drawSwatches(); }; $('swatches').append(b); }
+}
+drawSwatches();
+$('skin').onchange = e => { skin = +e.target.value; if (SKIN_CUPS[skin] != null) cups = SKIN_CUPS[skin]; else if (skin === 0) cups = CUPS[0]; drawSwatches(); };
+$('hat').onchange = e => hatMode = +e.target.value;
+const hatNow = () => hatMode >= 0 ? hatMode : hatByDate();
+
+const W = await loadWasm();
+const P = new Player(W);
+window.player = P;
+P.onstate = on => { $('play').disabled = false; $('play').textContent = on ? L.pause : L.resume; };
+async function loadFile(f) {
+  try { P.ensure(); const buf = await P.ctx.decodeAudioData(await f.arrayBuffer()); $('track').textContent = f.name; await P.load(buf); }
+  catch (e) { $('track').textContent = L.bad; }
+}
+$('play').onclick = () => P.toggle();
+$('bar').onclick = e => { if (!P.buf) return; const r = $('bar').getBoundingClientRect(); P.startAt((e.clientX - r.left) / r.width * P.dur); };
+const dz = $('drop');
+dz.onclick = () => $('file').click();
+dz.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } };
+$('file').onchange = e => e.target.files[0] && loadFile(e.target.files[0]);
+dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
+dz.ondragleave = () => dz.classList.remove('over');
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); };
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+$('demo').onclick = async () => { P.ensure(); $('track').textContent = L.demoName; await P.load(makeBeat(P.ctx)); };
+
+const big = $('big').getContext('2d'), small = $('small').getContext('2d');
+function clock() { const d = new Date(); $('clock').innerHTML = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '<br>' + d.toLocaleDateString(); }
+clock(); setInterval(clock, 10000);
+function frame() {
+  const mode = P.tick(), now = P.now(), lat = P.latency();
+  const night = new Date().getHours() < 6 ? 1 : 0, hat = hatNow();
+  blit(W, big, W.hg_draw(now, 14, cups, skin, hat, 1, lat, night), 14);
+  blit(W, small, W.hg_draw(now, 2, cups, skin, hat, 1, lat, night), 2);
+  $('bpm').textContent = mode === 3 ? Math.round(W.hg_bpm()) : '–';
+  $('sec').textContent = mode === 3 ? L.secs[W.hg_section()] : mode === 0 ? L.silence : L.listening;
+  $('prog').style.width = P.dur ? (100 * Math.min(1, P.pos() / P.dur)) + '%' : '0';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -21,12 +21,21 @@ jobs:
       - name: Tracker tests
         run: |
           cd tests
-          for t in test_tracker test_transitions test_chaos; do
+          for t in test_tracker test_transitions test_chaos test_sprites; do
             g++ -O2 -std=c++17 -I../src $t.cpp -o $t && ./$t
           done
 
       - name: Build exe
         run: sh build.sh
+
+      - name: Build web demo (WebAssembly)
+        run: |
+          pip install ziglang
+          sh web/build.sh
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
 
       - uses: actions/upload-artifact@v4
         with:
@@ -61,3 +70,21 @@ jobs:
         with:
           files: build/HeadphonesGuy.exe
           body_path: docs/RELEASE_NOTES.md
+
+  # the browser demo goes to GitHub Pages from main
+  pages:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - id: deploy
+        uses: actions/deploy-pages@v4
