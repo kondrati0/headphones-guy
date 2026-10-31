@@ -1,9 +1,10 @@
 #include <winver.h>
+// HG_V1..HG_V3 and HG_VS come from the VERSION file, see build.sh
 1 ICON "guy.ico"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     1,0,0,0
-PRODUCTVERSION  1,0,0,0
+FILEVERSION     HG_V1,HG_V2,HG_V3,0
+PRODUCTVERSION  HG_V1,HG_V2,HG_V3,0
 FILEOS          VOS_NT_WINDOWS32
 FILETYPE        VFT_APP
 BEGIN
@@ -13,11 +14,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName",      "Headphones Guy"
       VALUE "FileDescription",  "Headphones Guy - a taskbar smiley that nods to your music"
-      VALUE "FileVersion",      "1.0.0"
+      VALUE "FileVersion",      HG_VS
       VALUE "InternalName",     "HeadphonesGuy"
       VALUE "OriginalFilename", "HeadphonesGuy.exe"
       VALUE "ProductName",      "Headphones Guy"
-      VALUE "ProductVersion",   "1.0.0"
+      VALUE "ProductVersion",   HG_VS
       VALUE "LegalCopyright",   "MIT License"
     END
   END
