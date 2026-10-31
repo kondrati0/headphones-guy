@@ -19,6 +19,8 @@
   <img src="docs/demo.gif" alt="Headphones Guy on the taskbar" width="900">
 </p>
 
+**Not sure yet? [Try him in the browser](https://kondrati0.github.io/headphones-guy/)**: drop a track and watch him nod. Same beat tracker as the app, compiled to WebAssembly, and your file never leaves the page.
+
 ## What it does
 
 He sits next to your tray icons and listens to the sound your PC is putting out, then **nods exactly on the beat**. No setup, no audio routing, no virtual cables.
@@ -26,25 +28,40 @@ He sits next to your tray icons and listens to the sound your PC is putting out,
 - **Beat tracking in real time**: tempo and beat position from the system audio, re-locks within seconds when the track changes or you scrub.
 - **Built for fast music**: tuned on hardcore, uptempo, terror, breakcore, DnB, neurofunk and dubstep. Handles **130–300 BPM**, including the nasty 130-vs-260 and 3:4 polyrhythm cases.
 - **Knows the song structure**: nods deeper on loud parts, chills on breakdowns, shivers during build-up snare rolls, and **loses it on the drop**, for the whole drop rather than just a second.
-- **Has a life**: headphones around his neck when nothing plays, blinks, wakes up when music starts. Sweats at 270+ BPM, steams out of his ears near 300, and falls asleep at night when it's quiet.
-- **Skins and hats**: five built-in skins (classic, pumpkin, robot, demon, zombie), plus your own drawn in the **[skin editor](https://kondrati0.github.io/headphones-guy/editor.html)**, which installs them into the app in one click ([more](docs/SKINS.md)). A witch hat for Halloween week and a Santa hat for the New Year show up by themselves.
-- **A guy per app**: give Spotify its own guy, or Discord one that talks along when people speak (Windows 10 2004+).
-- **Stream window**: a big guy on a green background, for OBS window capture with a chroma key.
-- **RGB in the beat**: your keyboard, mouse and strips flash the headphone color on every beat through [OpenRGB](https://openrgb.org).
-- **Monthly card**: hours listened, average tempo, drops survived and your top tempo as a picture you can post.
+- **Has a life**: headphones around his neck when nothing plays, blinks, wakes up when music starts. Sweats at 270+ BPM, steams out of his ears near 300, falls asleep at night when it's quiet.
 - **Featherweight**: one ~400 KB `.exe`, no installer, no dependencies, ~2% of one CPU core.
 - **Private**: no internet access at all (OpenRGB sync only talks to OpenRGB on your own PC). Audio is analysed in memory and thrown away.
-
-<p align="center">
-  <img src="docs/looks.png" alt="Skins, seasonal hats and tempo easter eggs" width="900">
-</p>
-
-**Not sure yet? [Try him in the browser](https://kondrati0.github.io/headphones-guy/)**: drop a track and watch him nod. Same beat tracker, compiled to WebAssembly.
 
 <p align="center">
   <img src="docs/closeup.gif" alt="Up close: nod, loud, build-up, drop" height="200">
   &nbsp;&nbsp;
   <img src="docs/faces.png" alt="All his faces" width="620">
+</p>
+
+## Make him yours
+
+Five built-in skins (classic, pumpkin, robot, demon, zombie), seasonal hats that show up by themselves (a witch hat for Halloween week, a Santa hat for the New Year), and the tempo easter eggs:
+
+<p align="center">
+  <img src="docs/looks.png" alt="Skins, seasonal hats and tempo easter eggs" width="900">
+</p>
+
+Or draw your own in the **[skin editor](https://kondrati0.github.io/headphones-guy/editor.html)**. Put glasses, a scar or a cap on him once and they stay on every face he makes, recolor him, or redraw whole frames. Watch him nod with it to a beat, then hit **Install in Headphones Guy**: the skin lands in the app and switches on. Prefer files? It's [one small .ini](docs/SKINS.md).
+
+<p align="center">
+  <img src="docs/editor.png" alt="The skin editor" width="820">
+</p>
+
+## Extras
+
+- **A guy per app**: give Spotify its own guy, or Discord one that talks along when people speak. Up to 3, next to the main one (Windows 10 2004+).
+- **Stream window**: a big guy and the BPM on a green background. In OBS, add *Window Capture* plus a *Chroma Key* filter and he nods on your stream.
+- **RGB in the beat**: your keyboard, mouse and strips flash the headphone color on every beat and strobe on build-ups, through [OpenRGB](https://openrgb.org).
+- **Monthly card**: hours listened, average tempo, drops survived and your top steady tempo, as a picture to post wherever.
+- **Nodding tray icon**: for people who hide the taskbar.
+
+<p align="center">
+  <img src="docs/stats-card.png" alt="Monthly stats card" width="640">
 </p>
 
 ## Download & run
@@ -177,6 +194,10 @@ python3 -m http.server -d web 8000   # open http://localhost:8000
 **Multiple monitors / vertical taskbar?** He lives on the primary taskbar and supports horizontal and vertical layouts, plus per-monitor DPI.
 
 **Windows 11?** Developed and used on Windows 10. Windows 11 uses the same taskbar window classes, so it should work. If he shows up in a weird place, open an issue with a screenshot.
+
+**"Install in Headphones Guy" in the skin editor does nothing.** The app has to be version 1.1 or newer and has to have run at least once (that's when it registers itself for those links). Your browser asks whether to open Headphones Guy: allow it. Or use *Download .ini* and put the file in the skins folder.
+
+**The guys for single apps menu is greyed out.** It needs Windows 10 version 2004 (May 2020) or newer. Only apps that are playing sound right now show up in the list, so start the music first.
 
 **Does it work with any player?** Yes. He listens to the Windows output device, not to a specific app. If you switch the default output device he follows it.
 
