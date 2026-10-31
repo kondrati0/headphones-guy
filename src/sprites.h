@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include <cstdlib>
 
 // 16x16 frames. Legend: k outline, e eyes/mouth, y face, B headband, C/D/L cup (main / rim / highlight, from the
 // headphone color), t tongue, 1-9 extra colors a skin can define, '.' transparent.
@@ -45,6 +46,7 @@ struct Skin {
     uint32_t col[128] = {};               // ARGB per legend char, 0 = transparent
     bool hasCups = false; uint32_t cups = 0;
     std::vector<std::string> frame[F_COUNT];   // empty = built-in frame
+    std::vector<std::string> overlay;          // accessories drawn over every frame (16 rows), empty = none
     const char* row(int f, int r) const { return frame[f].size() == 16 ? frame[f][r].c_str() : g_maps[f][r]; }
 };
 inline Skin MakeSkin(const char* id, const char* name, uint32_t face, uint32_t outline, uint32_t eyes, uint32_t band, int cups = -1) {
@@ -62,6 +64,87 @@ inline std::vector<Skin> BuiltinSkins() {
     v.push_back(MakeSkin("zombie", "Zombie", 0x9ACD5A, 0x2F4A12, 0x2F4A12, 0x8A8F7A, 0x9B5DE5));
     return v;
 }
+// ---------- skin files ----------
+// One small ini, the same for the app and the web editor:
+//   [skin]    name, face, outline, eyes, headband, tongue, cups (RRGGBB), 1..9 extra colors
+//   [overlay] 0= .. 15=   accessories, 16 chars per row, drawn over every frame
+//   [frames]  listen.0= .. listen.15= (and any other frame name) to replace whole frames
+inline std::string Trim(const std::string& x) {
+    size_t a = 0, b = x.size();
+    while (a < b && (x[a] == ' ' || x[a] == '\t' || x[a] == '\r')) a++;
+    while (b > a && (x[b - 1] == ' ' || x[b - 1] == '\t' || x[b - 1] == '\r')) b--;
+    return x.substr(a, b - a);
+}
+inline std::string Lower(std::string x) { for (auto& c : x) if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a'); return x; }
+inline bool ParseHex(const std::string& v, uint32_t& out) {
+    std::string h = v; if (!h.empty() && h[0] == '#') h = h.substr(1);
+    if (h.size() < 6) return false;
+    uint32_t r = 0;
+    for (int i = 0; i < 6; i++) { char c = h[i]; int d = c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1; if (d < 0) return false; r = r * 16 + d; }
+    out = r; return true;
+}
+// a sprite row: 16 chars, anything unknown becomes transparent
+inline std::string CleanRow(const std::string& v) {
+    std::string r = v.substr(0, 16); r.resize(16, '.');
+    for (auto& c : r) if (!strchr("keyBCDLt123456789", c)) c = '.';
+    return r;
+}
+// starts from the classic guy; returns false if it doesn't look like a skin at all
+inline bool ParseSkinIni(const std::string& text, Skin& s) {
+    Skin base = BuiltinSkins()[0]; base.id = s.id; s = base;
+    std::string sec; bool any = false;
+    std::vector<std::string> fr[F_COUNT]; std::vector<std::string> ov(16, std::string(16, '.')); bool haveOv = false;
+    for (int f = 0; f < F_COUNT; f++) fr[f].assign(16, std::string());
+    size_t i = 0;
+    if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) i = 3;   // UTF-8 BOM
+    while (i < text.size()) {
+        size_t j = text.find('\n', i); if (j == std::string::npos) j = text.size();
+        std::string line = Trim(text.substr(i, j - i)); i = j + 1;
+        if (line.empty() || line[0] == ';' || line[0] == '#') continue;
+        if (line[0] == '[') { size_t e = line.find(']'); sec = Lower(Trim(line.substr(1, e == std::string::npos ? std::string::npos : e - 1))); continue; }
+        size_t eq = line.find('='); if (eq == std::string::npos) continue;
+        std::string key = Lower(Trim(line.substr(0, eq))), val = Trim(line.substr(eq + 1));
+        if (sec == "skin") {
+            uint32_t c;
+            if (key == "name") { s.name = val.substr(0, 60); any = true; continue; }
+            size_t sc = val.find(';'); if (sc != std::string::npos) val = Trim(val.substr(0, sc));
+            if (!ParseHex(val, c)) continue;
+            any = true;
+            if (key == "face") s.col['y'] = Argb(c); else if (key == "outline") s.col['k'] = Argb(c); else if (key == "eyes") s.col['e'] = Argb(c);
+            else if (key == "headband") s.col['B'] = Argb(c); else if (key == "tongue") s.col['t'] = Argb(c);
+            else if (key == "cups") { s.hasCups = true; s.cups = c; }
+            else if (key.size() == 1 && key[0] >= '1' && key[0] <= '9') s.col[(int)key[0]] = Argb(c);
+        } else if (sec == "overlay") {
+            std::string k = key.compare(0, 8, "overlay.") == 0 ? key.substr(8) : key;
+            int r = atoi(k.c_str()); if (k.empty() || r < 0 || r > 15) continue;
+            ov[r] = CleanRow(val); haveOv = any = true;
+        } else if (sec == "frames") {
+            size_t dot = key.rfind('.'); if (dot == std::string::npos) continue;
+            std::string nm = key.substr(0, dot); int r = atoi(key.c_str() + dot + 1); if (r < 0 || r > 15) continue;
+            for (int f = 0; f < F_COUNT; f++) if (nm == kFrameNames[f]) { fr[f][r] = CleanRow(val); any = true; }
+        }
+    }
+    for (int f = 0; f < F_COUNT; f++) {
+        bool used = false; for (auto& r : fr[f]) used |= !r.empty();
+        if (used) { for (int r = 0; r < 16; r++) if (fr[f][r].empty()) fr[f][r] = g_maps[f][r]; s.frame[f] = fr[f]; }   // rows left out stay as drawn
+    }
+    if (haveOv) s.overlay = ov;
+    if (s.name.empty()) s.name = "My skin";
+    return any;
+}
+// base64url (and plain base64) decode, for skins sent by link
+inline bool Base64Decode(const std::string& in, std::string& out) {
+    out.clear(); int buf = 0, bits = 0;
+    for (char c : in) {
+        int v = c >= 'A' && c <= 'Z' ? c - 'A' : c >= 'a' && c <= 'z' ? c - 'a' + 26 : c >= '0' && c <= '9' ? c - '0' + 52 : (c == '-' || c == '+') ? 62 : (c == '_' || c == '/') ? 63 : c == '=' ? -2 : -1;
+        if (v == -2) break;
+        if (v < 0) return false;
+        buf = (buf << 6) | v; bits += 6;
+        if (bits >= 8) { bits -= 8; out += (char)((buf >> bits) & 255); }
+    }
+    return true;
+}
+
 // skin ids that have a Russian name in the UI
 inline const char* SkinNameRu(const std::string& id) {
     static const char* ids[] = {"classic", "pumpkin", "robot", "demon", "zombie"};
@@ -119,6 +202,13 @@ inline void DrawGuy(uint32_t* px, int stride, int s, int rows, const Pose& p, co
             if (ch == 'C') col = cC; else if (ch == 'D') col = cD; else if (ch == 'L') col = cL;
             else if (ch > 0 && ch < 127) col = sk.col[(int)ch];
             Cell(px, stride, s, rows, c, r + p.y, col);
+        }
+    }
+    if (sk.overlay.size() == 16) {         // accessories ride along with the head
+        for (int r = 0; r < 16; r++) for (int c = 0; c < 16; c++) {
+            char ch = sk.overlay[r][c]; if (ch == '.') continue;
+            uint32_t col = ch == 'C' ? cC : ch == 'D' ? cD : ch == 'L' ? cL : (ch > 0 && ch < 127) ? sk.col[(int)ch] : 0;
+            Cell(px, stride, s, rows, c + p.x, r + p.y, col);
         }
     }
     if (p.hat > HAT_NONE && p.hat < HAT_COUNT) {

@@ -1,6 +1,18 @@
 # Making a skin
 
-A skin is one small `.ini` file. Put it in `%APPDATA%\HeadphonesGuy\skins\` and pick it in the tray menu under **Skin**. The easiest way to start: tray menu → **Skin → Open skins folder...** That opens the folder and drops an `example.ini` in it to copy from.
+## The easy way: the skin editor
+
+Open the **[skin editor](https://kondrati0.github.io/headphones-guy/editor.html)** (or tray menu → **Skin → Draw a skin...**):
+
+- **Accessories**: draw glasses, a scar, a beard or a cap on top of the face. The layer goes on every face he makes, so you draw it once. Mirror is on by default, right click erases, Ctrl+Z undoes.
+- **Colors**: recolor the face, outline, eyes, headband and headphones, or start from a built-in skin.
+- **Frames**: redraw whole frames if you want to go all in.
+
+The preview nods to a generated beat, and you can freeze it on any face. When it looks right, click **Install in Headphones Guy**: the skin lands in the app and switches on (version 1.1+). **Download .ini** saves the file instead.
+
+## By hand
+
+A skin is one small `.ini` file. Put it in `%APPDATA%\HeadphonesGuy\skins\` and pick it in the tray menu under **Skin**. Tray menu → **Skin → Open skins folder...** opens that folder and drops an `example.ini` in it to copy from.
 
 The menu re-reads the folder every time it opens, so you can edit a file, open the menu, click your skin and see the change. No restart needed.
 
@@ -19,9 +31,27 @@ tongue=FF6F7F
 
 Everything is `RRGGBB`, and anything you leave out stays like the classic guy.
 
+## Accessories
+
+`[overlay]` is drawn on top of every frame and moves with the head. Rows are numbered 0–15, and you only list the rows you use:
+
+```ini
+[skin]
+name=Cool shades
+1=111111
+3=E53935
+
+[overlay]
+6=...1111111111...
+7=...1111..1111...
+8=....11....11....
+9=...........3....
+10=............3...
+```
+
 ## Your own frames
 
-To change the drawing itself, replace any frame with 16 rows of 16 characters each:
+To change the drawing itself, replace rows of any frame (16 characters each). Rows you leave out stay as in the built-in frame:
 
 ```ini
 [skin]

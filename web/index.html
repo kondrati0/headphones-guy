@@ -71,6 +71,7 @@
     <label for="skin" id="t-skin">Skin</label><select id="skin"></select>
     <label for="hat" id="t-hat">Hat</label><select id="hat"></select>
     <span id="swatches" style="display:flex;gap:6px"></span>
+    <a href="editor.html" style="margin-left:auto"><button type="button" id="t-draw">Draw your own skin</button></a>
   </div>
 
   <div class="cta">
@@ -79,13 +80,13 @@
   </div>
   <p class="note" id="t-note">The Windows app listens to everything your PC plays (Spotify, YouTube, games) with no setup. This page runs the exact same beat tracker, compiled to WebAssembly.</p>
 </main>
-<script>
-const RU = /^ru/i.test(navigator.language || '');
+<script type="module">
+import { RU, loadWasm, makeBeat, Player, blit, hatByDate } from './common.js';
 const L = RU ? {
   title:'Чел в наушниках', sub:'Пиксельный смайлик, который живёт на панели задач Windows и кивает в бит всему, что играет. Сначала попробуй его тут.',
   drop:'Кидай сюда mp3 / wav / flac', drop2:'или жми, чтобы выбрать файл. Он никуда не уходит из браузера.',
   demo:'Включить сгенерированный бит на 200 BPM', pause:'Пауза', resume:'Дальше', bpm:'BPM', sec:'Секция',
-  onbar:'На панели задач, в реальном размере', look:'Внешний вид', skin:'Скин', hat:'Шапка',
+  onbar:'На панели задач, в реальном размере', look:'Внешний вид', skin:'Скин', hat:'Шапка', draw:'Нарисовать свой скин',
   dl:'Скачать для Windows (~400 КБ)', src:'Исходники на GitHub',
   note:'Приложение для Windows слушает всё, что играет на компе (Spotify, YouTube, игры), без настройки. Здесь работает тот же самый трекер бита, собранный в WebAssembly.',
   secs:['кач','громко','тихо','билд-ап','дроп'], silence:'тишина', listening:'слушает', demoName:'Сгенерированный бит · 200 BPM',
@@ -94,7 +95,7 @@ const L = RU ? {
   title:'Headphones Guy', sub:'A tiny pixel smiley that lives on your Windows taskbar and nods to whatever you play. Try him here first.',
   drop:'Drop an mp3 / wav / flac here', drop2:'or click to pick a file. It never leaves your browser.',
   demo:'Play a generated 200 BPM beat', pause:'Pause', resume:'Resume', bpm:'BPM', sec:'Section',
-  onbar:'On your taskbar, real size', look:'His look', skin:'Skin', hat:'Hat',
+  onbar:'On your taskbar, real size', look:'His look', skin:'Skin', hat:'Hat', draw:'Draw your own skin',
   dl:'Download for Windows (~400 KB)', src:'Source on GitHub',
   note:'The Windows app listens to everything your PC plays (Spotify, YouTube, games) with no setup. This page runs the exact same beat tracker, compiled to WebAssembly.',
   secs:['groove','loud','quiet','build-up','drop'], silence:'silence', listening:'listening', demoName:'Generated beat · 200 BPM',
@@ -102,10 +103,9 @@ const L = RU ? {
 };
 const $ = id => document.getElementById(id);
 if (RU) document.documentElement.lang = 'ru';
-for (const [id, k] of [['t-title','title'],['t-sub','sub'],['t-drop','drop'],['t-drop2','drop2'],['demo','demo'],['play','pause'],['t-bpm','bpm'],['t-sec','sec'],['t-onbar','onbar'],['t-look','look'],['t-skin','skin'],['t-hat','hat'],['t-dl','dl'],['t-src','src'],['t-note','note']]) $(id).textContent = L[k];
+for (const [id, k] of [['t-title','title'],['t-sub','sub'],['t-drop','drop'],['t-drop2','drop2'],['demo','demo'],['play','pause'],['t-bpm','bpm'],['t-sec','sec'],['t-onbar','onbar'],['t-look','look'],['t-skin','skin'],['t-hat','hat'],['t-draw','draw'],['t-dl','dl'],['t-src','src'],['t-note','note']]) $(id).textContent = L[k];
 document.title = L.title + (RU ? ' — попробуй в браузере' : ' — try it in the browser');
 
-// ---- look ----
 const CUPS = [0xFF5D73, 0xE53935, 0xFF8C1A, 0x3CCB5A, 0x3DB8FF, 0x3D5DFF, 0x9B5DE5, 0xF2F2F2];
 const SKIN_CUPS = [null, null, 0x3DB8FF, 0x222222, 0x9B5DE5];
 let cups = CUPS[0], skin = 0, hatMode = -1;
@@ -119,52 +119,18 @@ function drawSwatches() {
 drawSwatches();
 $('skin').onchange = e => { skin = +e.target.value; if (SKIN_CUPS[skin] != null) cups = SKIN_CUPS[skin]; else if (skin === 0) cups = CUPS[0]; drawSwatches(); };
 $('hat').onchange = e => hatMode = +e.target.value;
-function hatNow() {
-  if (hatMode >= 0) return hatMode === 0 ? 0 : hatMode;
-  const d = new Date(), m = d.getMonth() + 1, day = d.getDate();
-  if ((m === 10 && day >= 25) || (m === 11 && day <= 1)) return 1;
-  if ((m === 12 && day >= 20) || (m === 1 && day <= 10)) return 2;
-  return 0;
-}
+const hatNow = () => hatMode >= 0 ? hatMode : hatByDate();
 
-// ---- wasm ----
-let W = null;
-const wasmReady = WebAssembly.instantiateStreaming(fetch('guy.wasm'), { wasi_snapshot_preview1: new Proxy({}, { get: () => () => 0 }) })
-  .then(r => { W = r.instance.exports; if (W._initialize) W._initialize(); W.hg_init(48000); });
-
-// ---- audio ----
-let ctx = null, src = null, mono = null, sr = 48000, startCtx = 0, offset = 0, playing = false, fed = 0, dur = 0;
-function ensureCtx() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; }
-function pos() { return playing ? ctx.currentTime - startCtx + offset : offset; }
-// tracker clock: follows the song while playing and keeps running while paused, so he notices the silence
-let pausedV = 0, pausedR = performance.now() / 1000;
-function vnow() { return playing ? pos() : pausedV + performance.now() / 1000 - pausedR; }
-function markPaused() { pausedV = vnow(); pausedR = performance.now() / 1000; }
-function stopSrc() { if (src) { src.onended = null; try { src.stop(); } catch (e) {} src.disconnect(); src = null; } }
-let audioBuf = null;
-function startAt(t) {
-  stopSrc();
-  offset = Math.max(0, Math.min(t, dur - 0.05));
-  src = ctx.createBufferSource(); src.buffer = audioBuf; src.connect(ctx.destination);
-  src.onended = () => { if (playing && pos() >= dur - 0.1) { markPaused(); playing = false; offset = 0; $('play').textContent = L.resume; } };
-  startCtx = ctx.currentTime; src.start(0, offset); playing = true;
-  W.hg_init(sr); fed = Math.floor(offset * sr);     // fresh tracker after a jump, like a real seek
-  $('play').disabled = false; $('play').textContent = L.pause;
-}
-async function load(buf, name) {
-  await wasmReady; ensureCtx(); await ctx.resume();
-  audioBuf = buf; sr = buf.sampleRate; dur = buf.duration;
-  mono = new Float32Array(buf.length);
-  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) mono[i] += d[i] / buf.numberOfChannels; }
-  $('track').textContent = name;
-  startAt(0);
-}
+const W = await loadWasm();
+const P = new Player(W);
+window.player = P;
+P.onstate = on => { $('play').disabled = false; $('play').textContent = on ? L.pause : L.resume; };
 async function loadFile(f) {
-  try { ensureCtx(); const ab = await f.arrayBuffer(); const buf = await ctx.decodeAudioData(ab); await load(buf, f.name); }
+  try { P.ensure(); const buf = await P.ctx.decodeAudioData(await f.arrayBuffer()); $('track').textContent = f.name; await P.load(buf); }
   catch (e) { $('track').textContent = L.bad; }
 }
-$('play').onclick = () => { if (!audioBuf) return; if (playing) { markPaused(); offset = pos(); stopSrc(); playing = false; $('play').textContent = L.resume; } else startAt(offset); };
-$('bar').onclick = e => { if (!audioBuf) return; const r = $('bar').getBoundingClientRect(); startAt((e.clientX - r.left) / r.width * dur); };
+$('play').onclick = () => P.toggle();
+$('bar').onclick = e => { if (!P.buf) return; const r = $('bar').getBoundingClientRect(); P.startAt((e.clientX - r.left) / r.width * P.dur); };
 const dz = $('drop');
 dz.onclick = () => $('file').click();
 dz.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } };
@@ -174,52 +140,19 @@ dz.ondragleave = () => dz.classList.remove('over');
 dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); };
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+$('demo').onclick = async () => { P.ensure(); $('track').textContent = L.demoName; await P.load(makeBeat(P.ctx)); };
 
-// generated hardcore-ish loop: groove, a break with a snare roll building up, then the drop
-$('demo').onclick = async () => {
-  ensureCtx(); const rate = ctx.sampleRate, bpm = 200, beat = 60 / bpm, len = 44, n = Math.floor(len * rate);
-  const buf = ctx.createBuffer(1, n, rate), d = buf.getChannelData(0);
-  let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296 - 0.5;
-  const hit = (t0, f) => { const i0 = Math.floor(t0 * rate); for (let i = 0; i < rate * 0.5 && i0 + i < n; i++) { const v = f(i / rate); if (v === null) break; d[i0 + i] += v; } };
-  const kick = (t, hard) => { let ph = 0; hit(t, x => { if (x > 0.32) return null; const fr = 48 + 260 * Math.exp(-x * 38); ph += 2 * Math.PI * fr / rate; const s = Math.sin(ph) * Math.exp(-x * (hard ? 7 : 11)); return Math.tanh(s * (hard ? 5 : 2.2)) * 0.55; }); };
-  const hat = (t, a) => hit(t, x => x > 0.05 ? null : rnd() * a * Math.exp(-x * 90));
-  const snare = (t, a) => hit(t, x => x > 0.16 ? null : (rnd() * 0.9 + Math.sin(2 * Math.PI * 190 * x) * 0.4) * a * Math.exp(-x * 24));
-  const B = Math.round(len / beat);
-  for (let b = 0; b < B; b++) {
-    const t = b * beat;
-    if (t < 6) { kick(t, false); hat(t + beat / 2, 0.18); }
-    else if (t < 18) { kick(t, false); hat(t + beat / 2, 0.25); if (b % 2) snare(t, 0.3); }
-    else if (t < 26) {                                   // break: no kick, snare roll getting denser
-      hat(t + beat / 2, 0.1);
-      const k = t < 22 ? 1 : t < 24 ? 2 : 4;
-      for (let j = 0; j < k; j++) snare(t + j * beat / k, 0.18 + 0.2 * (t - 18) / 8);
-    } else { kick(t, true); hat(t + beat / 2, 0.3); if (b % 2) snare(t, 0.35); }
-  }
-  for (let i = 0; i < n; i++) { const t = i / rate; d[i] += (t > 18 && t < 26 ? 0.04 : 0) * Math.sin(2 * Math.PI * 220 * t) * Math.sin(Math.PI * (t - 18) / 8); d[i] = Math.max(-1, Math.min(1, d[i])); }
-  await load(buf, L.demoName);
-};
-
-// ---- render loop ----
 const big = $('big').getContext('2d'), small = $('small').getContext('2d');
-function blit(g, ptr, s) { const w = 16 * s, h = 18 * s; const img = new ImageData(new Uint8ClampedArray(W.memory.buffer, ptr, w * h * 4).slice(), w, h); g.clearRect(0, 0, w, h); g.putImageData(img, 0, 0); }
 function clock() { const d = new Date(); $('clock').innerHTML = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '<br>' + d.toLocaleDateString(); }
 clock(); setInterval(clock, 10000);
 function frame() {
-  if (W) {
-    const now = vnow();
-    if (playing && mono) {
-      const upto = Math.min(mono.length, Math.floor(now * sr));
-      while (fed < upto) { const k = Math.min(4800, upto - fed); const p = W.hg_buffer(k); new Float32Array(W.memory.buffer, p, k).set(mono.subarray(fed, fed + k)); W.hg_feed(k, fed / sr); fed += k; }
-    }
-    const mode = W.hg_update(now);
-    const lat = ctx ? (ctx.outputLatency || 0) + (ctx.baseLatency || 0) : 0;
-    const night = new Date().getHours() < 6 ? 1 : 0, hat = hatNow();
-    blit(big, W.hg_draw(now, 14, cups, skin, hat, 1, lat, night), 14);
-    blit(small, W.hg_draw(now, 2, cups, skin, hat, 1, lat, night), 2);
-    $('bpm').textContent = mode === 3 ? Math.round(W.hg_bpm()) : '–';
-    $('sec').textContent = mode === 3 ? L.secs[W.hg_section()] : mode === 0 ? L.silence : L.listening;
-    $('prog').style.width = dur ? (100 * Math.min(1, pos() / dur)) + '%' : '0';
-  }
+  const mode = P.tick(), now = P.now(), lat = P.latency();
+  const night = new Date().getHours() < 6 ? 1 : 0, hat = hatNow();
+  blit(W, big, W.hg_draw(now, 14, cups, skin, hat, 1, lat, night), 14);
+  blit(W, small, W.hg_draw(now, 2, cups, skin, hat, 1, lat, night), 2);
+  $('bpm').textContent = mode === 3 ? Math.round(W.hg_bpm()) : '–';
+  $('sec').textContent = mode === 3 ? L.secs[W.hg_section()] : mode === 0 ? L.silence : L.listening;
+  $('prog').style.width = P.dur ? (100 * Math.min(1, P.pos() / P.dur)) + '%' : '0';
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

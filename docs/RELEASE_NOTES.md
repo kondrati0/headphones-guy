@@ -5,7 +5,7 @@ A tiny pixel smiley that sits on your Windows taskbar and nods to whatever you'r
 **Download `HeadphonesGuy.exe` below and run it. No installer, no dependencies.** Not sure yet? [Try him in the browser](https://kondrati0.github.io/headphones-guy/) first.
 
 ### What's new
-- **Skins**: classic, pumpkin, robot, demon, zombie, or draw your own in a tiny text file ([guide](https://github.com/kondrati0/headphones-guy/blob/main/docs/SKINS.md)).
+- **Skins**: classic, pumpkin, robot, demon, zombie, or draw your own in the **[skin editor](https://kondrati0.github.io/headphones-guy/editor.html)** and install it with one click.
 - **Seasonal hats**: a witch hat for Halloween week and a Santa hat for the New Year, on by themselves.
 - **Tempo easter eggs**: he sweats at 270+ BPM, steams out of his ears near 300 and falls asleep at night.
 - **A guy per app**: give Spotify its own guy, or Discord one that talks along (Windows 10 2004+).

@@ -2,7 +2,8 @@
 
 ## 1.1.0
 
-- Skins: classic, pumpkin, robot, demon, zombie, plus your own from a small .ini file (colors and whole frames). See docs/SKINS.md.
+- Skins: classic, pumpkin, robot, demon, zombie, plus your own from a small .ini file (colors, an accessories layer drawn over every frame, whole frames). See docs/SKINS.md.
+- Web skin editor: draw accessories, recolor, redraw frames with a live preview, then install into the app with one click (`headphonesguy://` links).
 - Seasonal hats by the date (witch hat for Halloween week, Santa hat for the New Year), or any hat all year.
 - Tempo easter eggs: sweats at 270+ BPM, steams out of the ears near 300, falls asleep at night when it's quiet.
 - Guys for single apps (Windows 10 2004+): up to 3 extra guys, each listening to one program. Voice apps get a talking guy.

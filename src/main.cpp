@@ -26,7 +26,8 @@ enum Str { S_APP, S_TIP_BPM, S_TIP_SILENCE, S_TIP_LISTEN, S_LEFT, S_RIGHT, S_RES
            S_PINK, S_RED, S_ORANGE, S_GREEN, S_CYAN, S_BLUE, S_PURPLE, S_WHITE,
            S_SKIN, S_OPEN_SKINS, S_HATS, S_HAT_AUTO, S_HAT_OFF, S_HAT_WITCH, S_HAT_SANTA, S_HAT_PARTY, S_EGGS, S_TRAYANIM,
            S_APPS, S_APPS_NONE, S_APPS_OLD, S_APPS_HINT, S_STREAM, S_STREAM_TITLE, S_RGB, S_RGB_NOSERVER, S_RGB_OK, S_STATS, S_STATS_FAIL,
-           S_CARD_LISTENED, S_CARD_HOURS, S_CARD_AVG, S_CARD_DROPS, S_CARD_RECORD, S_CARD_FOOTER, S_COUNT };
+           S_CARD_LISTENED, S_CARD_HOURS, S_CARD_AVG, S_CARD_DROPS, S_CARD_RECORD, S_CARD_FOOTER,
+           S_DRAW, S_SKIN_OK, S_SKIN_BAD, S_COUNT };
 static const wchar_t* kEn[S_COUNT] = {
     L"Headphones Guy", L"Headphones Guy · %ld BPM", L"Headphones Guy · silence", L"Headphones Guy · listening",
     L"Move left", L"Move right", L"Reset position", L"Nod offset: %d ms", L"Nod earlier (−10 ms)", L"Nod later (+10 ms)",
@@ -39,7 +40,8 @@ static const wchar_t* kEn[S_COUNT] = {
     L"Stream window (for OBS)", L"Headphones Guy · stream",
     L"Sync RGB lighting (OpenRGB)", L"OpenRGB not found: start it and turn on SDK Server", L"OpenRGB: %d device(s)",
     L"Monthly stats card...", L"Couldn't save the stats card",
-    L"listened", L"h", L"average tempo", L"drops survived", L"top steady tempo", L"headphones guy · github.com/kondrati0/headphones-guy" };
+    L"listened", L"h", L"average tempo", L"drops survived", L"top steady tempo", L"headphones guy · github.com/kondrati0/headphones-guy",
+    L"Draw a skin...", L"Skin installed: %ls", L"That link doesn't contain a skin" };
 static const wchar_t* kRu[S_COUNT] = {
     L"Чел в наушниках", L"Чел в наушниках · %ld BPM", L"Чел в наушниках · тишина", L"Чел в наушниках · слушает",
     L"Сдвинуть левее", L"Сдвинуть правее", L"Вернуть на место", L"Сдвиг кивка: %d мс", L"Кивать раньше (−10 мс)", L"Кивать позже (+10 мс)",
@@ -52,7 +54,8 @@ static const wchar_t* kRu[S_COUNT] = {
     L"Окно для стрима (OBS)", L"Чел в наушниках · стрим",
     L"Подсветка в бит (OpenRGB)", L"OpenRGB не найден: запусти его и включи SDK Server", L"OpenRGB: устройств %d",
     L"Сводка за месяц...", L"Не получилось сохранить сводку",
-    L"наслушал", L"ч", L"средний темп", L"дропов пережил", L"рекорд темпа", L"чел в наушниках · github.com/kondrati0/headphones-guy" };
+    L"наслушал", L"ч", L"средний темп", L"дропов пережил", L"рекорд темпа", L"чел в наушниках · github.com/kondrati0/headphones-guy",
+    L"Нарисовать скин...", L"Скин установлен: %ls", L"В этой ссылке нет скина" };
 static const wchar_t* kMonthEn[12] = {L"January", L"February", L"March", L"April", L"May", L"June", L"July", L"August", L"September", L"October", L"November", L"December"};
 static const wchar_t* kMonthRu[12] = {L"Январь", L"Февраль", L"Март", L"Апрель", L"Май", L"Июнь", L"Июль", L"Август", L"Сентябрь", L"Октябрь", L"Ноябрь", L"Декабрь"};
 static bool g_ru = false;
@@ -134,26 +137,19 @@ static void SaveSettings() {
 static std::vector<Skin> g_skins;
 static size_t g_skinIdx = 0;
 static std::wstring SkinsDir() { return g_dir + L"\\skins"; }
-// custom skin: an .ini with [skin] colors and optional [frames] rows, see docs/SKINS.md
+// custom skin: an .ini with [skin] colors, [overlay] accessories and optional [frames], see docs/SKINS.md
+static bool ReadFileUtf8(const std::wstring& path, std::string& out, size_t cap = 1 << 16) {
+    HANDLE h = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    if (h == INVALID_HANDLE_VALUE) return false;
+    LARGE_INTEGER sz; bool ok = GetFileSizeEx(h, &sz) && sz.QuadPart <= (LONGLONG)cap;
+    if (ok) { out.resize((size_t)sz.QuadPart); DWORD rd = 0; ok = ReadFile(h, &out[0], (DWORD)out.size(), &rd, NULL) && rd == out.size(); }
+    CloseHandle(h); return ok;
+}
 static bool LoadSkinFile(const std::wstring& path, const std::wstring& stem, Skin& s) {
-    const wchar_t* f = path.c_str();
-    s = BuiltinSkins()[0]; s.id = "custom:" + Narrow(stem.c_str());
-    wchar_t b[256]; GetPrivateProfileStringW(L"skin", L"name", stem.c_str(), b, 256, f);
-    s.name.clear(); for (wchar_t* w = b; *w; w++) { char u[8]; int n = WideCharToMultiByte(CP_UTF8, 0, w, 1, u, 8, NULL, NULL); s.name.append(u, n); }
-    struct { const wchar_t* key; char ch; } map[] = {{L"outline", 'k'}, {L"eyes", 'e'}, {L"face", 'y'}, {L"headband", 'B'}, {L"tongue", 't'}};
-    for (auto& m : map) s.col[(int)m.ch] = Argb(ReadHex(L"skin", m.key, s.col[(int)m.ch] & 0xFFFFFF, f));
-    for (int i = 1; i <= 9; i++) { wchar_t k[8]; swprintf(k, 8, L"%d", i); DWORD c = ReadHex(L"skin", k, 0x1000000, f); if (c != 0x1000000 && c <= 0xFFFFFF) s.col['0' + i] = Argb(c); }
-    DWORD cups = ReadHex(L"skin", L"cups", 0x1000000, f); if (cups <= 0xFFFFFF) { s.hasCups = true; s.cups = cups; }
-    for (int fr = 0; fr < F_COUNT; fr++) {
-        std::vector<std::string> rows;
-        for (int r = 0; r < 16; r++) {
-            wchar_t k[32]; swprintf(k, 32, L"%hs.%d", kFrameNames[fr], r);
-            GetPrivateProfileStringW(L"frames", k, L"\x01", b, 256, f);
-            if (b[0] == 1) break;
-            std::string row = Narrow(b); row.resize(16, '.'); rows.push_back(row);
-        }
-        if (!rows.empty()) { rows.resize(16, std::string(16, '.')); s.frame[fr] = rows; }
-    }
+    std::string text; if (!ReadFileUtf8(path, text)) return false;
+    s.id = "custom:" + Narrow(stem.c_str());
+    if (!ParseSkinIni(text, s)) return false;
+    if (s.name == "My skin") { std::string n; for (wchar_t w : stem) { char u[8]; int k = WideCharToMultiByte(CP_UTF8, 0, &w, 1, u, 8, NULL, NULL); n.append(u, k); } s.name = n; }
     return true;
 }
 static void LoadSkins() {
@@ -607,6 +603,60 @@ static void SetAutoStart(bool on) {
 // the exe was moved since autostart was turned on: point the Run entry at where it lives now
 static void FixAutoStartPath() { if (AutoStartOn()) SetAutoStart(true); }
 
+// ---------- headphonesguy:// links: the web skin editor sends skins straight into the app ----------
+static const wchar_t* kEditorUrl = L"https://kondrati0.github.io/headphones-guy/editor.html";
+static const ULONG_PTR kCopyLink = 0x4847;   // WM_COPYDATA tag: a headphonesguy:// link
+static void RegisterProtocol() {
+    wchar_t exe[MAX_PATH]; GetModuleFileNameW(NULL, exe, MAX_PATH);
+    std::wstring cmd = L"\"" + std::wstring(exe) + L"\" \"%1\"", icon = L"\"" + std::wstring(exe) + L"\",0";
+    HKEY k;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Classes\\headphonesguy", 0, NULL, 0, KEY_WRITE, NULL, &k, NULL) != ERROR_SUCCESS) return;
+    const wchar_t* desc = L"URL:Headphones Guy";
+    RegSetValueExW(k, NULL, 0, REG_SZ, (const BYTE*)desc, (DWORD)((wcslen(desc) + 1) * 2));
+    RegSetValueExW(k, L"URL Protocol", 0, REG_SZ, (const BYTE*)L"", 2);
+    RegCloseKey(k);
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Classes\\headphonesguy\\DefaultIcon", 0, NULL, 0, KEY_WRITE, NULL, &k, NULL) == ERROR_SUCCESS) {
+        RegSetValueExW(k, NULL, 0, REG_SZ, (const BYTE*)icon.c_str(), (DWORD)((icon.size() + 1) * 2)); RegCloseKey(k);
+    }
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Classes\\headphonesguy\\shell\\open\\command", 0, NULL, 0, KEY_WRITE, NULL, &k, NULL) == ERROR_SUCCESS) {
+        RegSetValueExW(k, NULL, 0, REG_SZ, (const BYTE*)cmd.c_str(), (DWORD)((cmd.size() + 1) * 2)); RegCloseKey(k);
+    }
+}
+static void Notify(const wchar_t* text) {
+    g_nid.uFlags = NIF_INFO; g_nid.dwInfoFlags = NIIF_INFO;
+    wcsncpy(g_nid.szInfoTitle, T_(S_APP), 63); g_nid.szInfoTitle[63] = 0;
+    wcsncpy(g_nid.szInfo, text, 255); g_nid.szInfo[255] = 0;
+    Shell_NotifyIconW(NIM_MODIFY, &g_nid);
+}
+static void RefreshLook();
+// headphonesguy://install?skin=<base64url of the skin ini>
+static void InstallFromLink(const std::wstring& link) {
+    size_t p = link.find(L"skin=");
+    std::string b64;
+    if (p != std::wstring::npos) for (size_t i = p + 5; i < link.size() && link[i] != L'&' && link[i] != L'"' && link[i] != L'/' ; i++) b64 += (char)link[i];
+    std::string text; Skin s;
+    if (b64.empty() || b64.size() > 200000 || !Base64Decode(b64, text) || !ParseSkinIni(text, s)) { Notify(T_(S_SKIN_BAD)); return; }
+    std::wstring stem;
+    for (char c : s.name) if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') stem += (wchar_t)c; else if (c == ' ' && !stem.empty() && stem.back() != L'-') stem += L'-';
+    while (!stem.empty() && stem.back() == L'-') stem.pop_back();
+    if (stem.empty()) stem = L"skin";
+    stem = stem.substr(0, 40);
+    std::wstring dir = SkinsDir(); CreateDirectoryW(dir.c_str(), NULL);
+    std::wstring name = stem; std::string old;
+    for (int n = 2; GetFileAttributesW((dir + L"\\" + name + L".ini").c_str()) != INVALID_FILE_ATTRIBUTES; n++) {
+        if (ReadFileUtf8(dir + L"\\" + name + L".ini", old) && old == text) break;   // the same skin again: just pick it
+        name = stem + L"-" + std::to_wstring(n);
+    }
+    HANDLE h = CreateFileW((dir + L"\\" + name + L".ini").c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
+    if (h == INVALID_HANDLE_VALUE) { Notify(T_(S_SKIN_BAD)); return; }
+    DWORD w; WriteFile(h, text.data(), (DWORD)text.size(), &w, NULL); CloseHandle(h);
+    g_set.skin = "custom:" + Narrow(name.c_str());
+    LoadSkins();
+    if (CurSkin().hasCups) g_set.cups = CurSkin().cups;
+    SaveSettings(); RefreshLook();
+    wchar_t msg[200]; swprintf(msg, 200, T_(S_SKIN_OK), SkinLabel(CurSkin()).c_str()); Notify(msg);
+}
+
 // ---------- stats card ----------
 static void MakeStatsCard() {
     g_stats.save();
@@ -650,7 +700,7 @@ static void AddTray() {
 }
 
 enum { CMD_LEFT = 100, CMD_RIGHT, CMD_RESET, CMD_EARLIER, CMD_LATER, CMD_EARLIER50, CMD_LATER50, CMD_AUTOSTART, CMD_MOVES, CMD_COLOR_CUSTOM, CMD_EXIT,
-       CMD_EGGS, CMD_TRAYANIM, CMD_STREAM, CMD_RGB, CMD_STATS, CMD_OPEN_SKINS,
+       CMD_EGGS, CMD_TRAYANIM, CMD_STREAM, CMD_RGB, CMD_STATS, CMD_OPEN_SKINS, CMD_DRAW,
        CMD_COLOR0 = 200, CMD_SKIN0 = 300, CMD_HAT0 = 400, CMD_APP0 = 500 };
 struct CupColor { Str name; DWORD rgb; };
 static const CupColor kCups[] = { {S_PINK, 0xFF5D73}, {S_RED, 0xE53935}, {S_ORANGE, 0xFF8C1A}, {S_GREEN, 0x3CCB5A},
@@ -700,6 +750,7 @@ static void ShowMenu() {
         AppendMenuW(sm, chk(i == g_skinIdx), CMD_SKIN0 + (UINT)i, SkinLabel(g_skins[i]).c_str());
     }
     AppendMenuW(sm, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(sm, MF_STRING, CMD_DRAW, T_(S_DRAW));
     AppendMenuW(sm, MF_STRING, CMD_OPEN_SKINS, T_(S_OPEN_SKINS));
     AppendMenuW(m, MF_POPUP, (UINT_PTR)sm, T_(S_SKIN));
     HMENU hm = CreatePopupMenu();
@@ -759,6 +810,7 @@ static void ShowMenu() {
     case CMD_RGB: g_set.rgb = !g_set.rgb; InterlockedExchange(&orgb::g_enabled, g_set.rgb); break;
     case CMD_STATS: MakeStatsCard(); return;
     case CMD_OPEN_SKINS: OpenSkinsFolder(); return;
+    case CMD_DRAW: ShellExecuteW(NULL, L"open", kEditorUrl, NULL, NULL, SW_SHOWNORMAL); return;
     case CMD_COLOR_CUSTOM: if (!PickCustomColor()) return; RefreshLook(); break;
     case CMD_AUTOSTART: SetAutoStart(!AutoStartOn()); break;
     case CMD_EXIT: DestroyWindow(g_msgWnd); return;
@@ -810,6 +862,12 @@ static LRESULT CALLBACK MsgProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_DISPLAYCHANGE: case WM_SETTINGCHANGE: case WM_DPICHANGED:
         UpdatePlacement(); return 0;
+    case WM_COPYDATA: {
+        const COPYDATASTRUCT* cd = (const COPYDATASTRUCT*)lp;
+        if (cd && cd->dwData == kCopyLink && cd->cbData >= 2 && cd->cbData < (1u << 20))
+            InstallFromLink(std::wstring((const wchar_t*)cd->lpData, cd->cbData / 2));
+        return TRUE;
+    }
     case WM_DESTROY:
         Shell_NotifyIconW(NIM_DELETE, &g_nid);
         PostQuitMessage(0); return 0;
@@ -843,8 +901,18 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, LPWSTR cmd, int) {
         CardText tx = {title, T_(S_CARD_LISTENED), T_(S_CARD_HOURS), T_(S_CARD_AVG), T_(S_CARD_DROPS), T_(S_CARD_RECORD), T_(S_CARD_FOOTER)};
         return RenderCard(file.c_str(), s, g_skins[0], 0xFF5D73, tx, HAT_WITCH) ? 0 : 2;
     }
+    std::wstring link;
+    if (cmd) { const wchar_t* l = wcsstr(cmd, L"headphonesguy:"); if (l) { link = l; while (!link.empty() && (link.back() == L'"' || link.back() == L' ')) link.pop_back(); } }
     HANDLE mtx = CreateMutexW(NULL, TRUE, L"Local\\HeadphonesGuyOneInstance");
-    if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        // already running: hand the link over to it
+        HWND other = FindWindowW(L"HeadphonesGuyTray", NULL);
+        if (other && !link.empty()) {
+            COPYDATASTRUCT cd = {kCopyLink, (DWORD)(link.size() * 2), (void*)link.data()};
+            DWORD_PTR r; SendMessageTimeoutW(other, WM_COPYDATA, 0, (LPARAM)&cd, SMTO_ABORTIFHUNG, 5000, &r);
+        }
+        return 0;
+    }
     g_inst = inst;
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     SetDpiAware();
@@ -860,6 +928,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, LPWSTR cmd, int) {
     g_appsSupported = applisten::Supported();
     WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
     FixAutoStartPath();
+    RegisterProtocol();
 
     WNDCLASSEXW wc = {sizeof(wc)};
     wc.lpfnWndProc = OverlayProc; wc.hInstance = inst; wc.lpszClassName = L"HeadphonesGuyOverlay"; wc.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -891,6 +960,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, LPWSTR cmd, int) {
     HANDLE tg = CreateThread(NULL, 0, orgb::Thread, NULL, 0, NULL);
     SetThreadPriority(tr, THREAD_PRIORITY_ABOVE_NORMAL);
     ApplyApps();
+    if (!link.empty()) InstallFromLink(link);
 
     MSG msg;
     while (GetMessageW(&msg, NULL, 0, 0) > 0) { TranslateMessage(&msg); DispatchMessageW(&msg); }

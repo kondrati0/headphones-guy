@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Headphones Guy — skin editor</title>
+<link rel="icon" href="favicon.png">
+<style>
+  :root { --bg:#141416; --card:#1d1d21; --line:#2c2c32; --text:#ececf0; --muted:#9a9aa3; --accent:#ff5d73; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:1040px; margin:0 auto; padding:28px 18px 60px; }
+  header { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+  h1 { font-size:26px; font-weight:650; margin:0; }
+  header a { color:var(--muted); font-size:14px; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start; }
+  @media (max-width:820px) { .layout { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .tabs { display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--line); }
+  .tabs button { background:none; border:none; border-bottom:2px solid transparent; border-radius:0; color:var(--muted); padding:8px 12px; margin-bottom:-1px; }
+  .tabs button.on { color:var(--text); border-bottom-color:var(--accent); }
+  .hint { color:var(--muted); font-size:13px; margin:0 0 12px; }
+  button, select, input[type=text] { font:inherit; color:var(--text); background:#26262b; border:1px solid #3a3a42; border-radius:8px; padding:6px 11px; cursor:pointer; }
+  input[type=text] { cursor:text; width:100%; }
+  button:hover, select:hover { border-color:#55555f; }
+  button.on { border-color:var(--accent); color:#fff; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#1a0b0e; font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  .tools { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .tools .sep { width:1px; height:24px; background:var(--line); margin:0 4px; }
+  .editor { display:flex; gap:16px; flex-wrap:wrap; }
+  #grid { touch-action:none; cursor:crosshair; border-radius:6px; display:block; max-width:100%; }
+  .pal { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:5px; align-content:start; min-width:180px; flex:1; }
+  .pal button { display:flex; align-items:center; gap:8px; text-align:left; padding:5px 8px; font-size:13px; }
+  .pal i { width:18px; height:18px; border-radius:4px; flex:none; border:1px solid #0006; }
+  .pal i.clear { background:repeating-conic-gradient(#555 0 25%, #333 0 50%) 0 0/8px 8px; }
+  .colors { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; }
+  .colors label { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); }
+  input[type=color] { width:38px; height:30px; padding:0; border:1px solid #3a3a42; border-radius:6px; background:none; cursor:pointer; }
+  .preview { display:flex; flex-direction:column; gap:12px; }
+  canvas.px { image-rendering:pixelated; image-rendering:crisp-edges; display:block; }
+  #big { width:192px; height:216px; margin:0 auto; }
+  .taskbar { background:#202022; border-radius:8px; height:44px; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:0 12px; border:1px solid var(--line); color:#ccc; font-size:11px; }
+  .taskbar .ico { width:14px; height:14px; border-radius:3px; background:#3a3a40; }
+  .poses { display:flex; flex-wrap:wrap; gap:5px; }
+  .poses button { font-size:13px; padding:4px 9px; }
+  .out { display:flex; flex-direction:column; gap:8px; }
+  .msg { font-size:13px; color:var(--muted); min-height:1.2em; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  h3 { font-size:14px; font-weight:600; margin:0 0 6px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header><h1 id="t-title">Skin editor</h1><a href="index.html" id="t-back">← back to the demo</a></header>
+  <div class="layout">
+    <section class="card">
+      <div class="tabs" role="tablist">
+        <button type="button" data-tab="acc" class="on" id="t-tab-acc">Accessories</button>
+        <button type="button" data-tab="colors" id="t-tab-colors">Colors</button>
+        <button type="button" data-tab="frames" id="t-tab-frames">Frames</button>
+      </div>
+      <p class="hint" id="hint"></p>
+      <div id="paintUi">
+        <div class="tools">
+          <button type="button" data-tool="pen" class="on" id="t-pen">Pencil</button>
+          <button type="button" data-tool="fill" id="t-fill">Fill</button>
+          <button type="button" data-tool="pick" id="t-pick">Pick</button>
+          <span class="sep"></span>
+          <button type="button" id="mirror" class="on">Mirror</button>
+          <span class="sep"></span>
+          <button type="button" id="undo" aria-label="Undo">↶</button>
+          <button type="button" id="redo" aria-label="Redo">↷</button>
+          <button type="button" id="clearLayer">Clear</button>
+          <span class="sep"></span>
+          <label id="t-on" style="color:var(--muted);font-size:14px">On</label>
+          <select id="frameSel"></select>
+        </div>
+        <div class="editor">
+          <canvas id="grid" width="416" height="416"></canvas>
+          <div class="pal" id="pal"></div>
+        </div>
+      </div>
+      <div id="colorsUi" hidden>
+        <div class="row" style="margin-bottom:14px"><label id="t-start" style="color:var(--muted)">Start from</label><select id="startSel"></select></div>
+        <div class="colors" id="colors"></div>
+        <h3 style="margin-top:18px" id="t-extra">Your extra colors (1–9) for accessories</h3>
+        <div class="colors" id="extras"></div>
+      </div>
+    </section>
+
+    <aside class="preview">
+      <div class="card">
+        <canvas id="big" class="px" width="192" height="216"></canvas>
+        <div class="poses" id="poses" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:10px"><button type="button" id="beat" class="primary">Play a beat</button></div>
+      </div>
+      <div class="card">
+        <h3 id="t-real">Real size</h3>
+        <div class="taskbar"><span class="ico"></span><canvas id="small" class="px" width="32" height="36"></canvas><span class="ico"></span><span>12:00</span></div>
+      </div>
+      <div class="card out">
+        <h3 id="t-name">Name</h3>
+        <input type="text" id="name" maxlength="40" value="My skin">
+        <button type="button" class="primary" id="install">Install in Headphones Guy</button>
+        <button type="button" id="download">Download .ini</button>
+        <div class="row"><button type="button" id="load">Open .ini...</button><button type="button" id="reset">Start over</button></div>
+        <input type="file" id="file" accept=".ini,text/plain" hidden>
+        <div class="msg" id="msg"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+<script type="module">
+import { RU, loadWasm, makeBeat, Player, blit, cstr } from './common.js';
+const L = RU ? {
+  title:'Редактор скинов', back:'← назад к демо', acc:'Аксессуары', colors:'Цвета', frames:'Кадры',
+  hintAcc:'Рисуй поверх лица: очки, шрам, борода, кепка. Слой сам ложится на все рожи, от кивка до дропа. Правая кнопка мыши стирает.',
+  hintColors:'Перекрась самого чела. Цвет наушников потом всё равно можно сменить в трее.',
+  hintFrames:'Для упоротых: перерисуй любой кадр целиком. Тронутые строки сохранятся, остальные останутся как у классики.',
+  pen:'Карандаш', fill:'Заливка', pick:'Пипетка', mirror:'Зеркало', clear:'Очистить', on:'На кадре', start:'Взять за основу',
+  extra:'Свои цвета (1–9) для аксессуаров', real:'В реальном размере', name:'Название', install:'Установить в Чела в наушниках', download:'Скачать .ini',
+  load:'Открыть .ini...', reset:'Начать заново', beat:'Включить бит', stop:'Выключить бит', auto:'Под бит',
+  poses:{ idle:'тишина', listen:'кивок', loud:'громко', build:'билд-ап', drop:'дроп', talk:'говорит' },
+  frameNames:{ idle:'тишина', idle_blink:'тишина, моргает', awake:'проснулся', awake_blink:'проснулся, моргает', listen:'кивок', loud:'громко', pause:'пауза', build:'билд-ап', drop:'дроп', talk:'говорит' },
+  pal:{ '.':'Стёрка', k:'Контур', e:'Глаза', y:'Лицо', B:'Дуга', t:'Язык', C:'Наушник', D:'Наушник, тень', L:'Наушник, блик' }, ex:'Цвет', unset:'не задан',
+  colorNames:{ y:'Лицо', k:'Контур', e:'Глаза и рот', B:'Дуга наушников', t:'Язык', C:'Наушники' },
+  skins:['Классика','Тыква','Робот','Демон','Зомби'],
+  installing:'Если браузер спросит, разреши открыть Чела в наушниках. Ничего не произошло? Нужна версия 1.1 или новее, либо скачай .ini и положи в папку скинов.',
+  tooBig:'Скин слишком большой для ссылки. Скачай .ini и положи его в папку скинов (трей → Скин → Открыть папку со скинами).',
+  saved:'Файл скачан. Положи его в папку скинов: трей → Скин → Открыть папку со скинами.', loaded:'Скин открыт', badFile:'Это не похоже на скин',
+  confirmReset:'Стереть всё и начать с классики?'
+} : {
+  title:'Skin editor', back:'← back to the demo', acc:'Accessories', colors:'Colors', frames:'Frames',
+  hintAcc:'Draw on top of the face: glasses, a scar, a beard, a cap. This layer goes on every face he makes, from a nod to the drop. Right click erases.',
+  hintColors:'Recolor the guy himself. The headphone color can still be changed from the tray later.',
+  hintFrames:'For the brave: redraw any frame completely. Rows you touch are saved, the rest stay classic.',
+  pen:'Pencil', fill:'Fill', pick:'Pick', mirror:'Mirror', clear:'Clear', on:'On frame', start:'Start from',
+  extra:'Your extra colors (1–9) for accessories', real:'Real size', name:'Name', install:'Install in Headphones Guy', download:'Download .ini',
+  load:'Open .ini...', reset:'Start over', beat:'Play a beat', stop:'Stop the beat', auto:'To the beat',
+  poses:{ idle:'idle', listen:'nod', loud:'loud', build:'build-up', drop:'drop', talk:'talking' },
+  frameNames:{ idle:'idle', idle_blink:'idle, blink', awake:'awake', awake_blink:'awake, blink', listen:'nod', loud:'loud', pause:'pause', build:'build-up', drop:'drop', talk:'talking' },
+  pal:{ '.':'Eraser', k:'Outline', e:'Eyes', y:'Face', B:'Headband', t:'Tongue', C:'Headphone', D:'Headphone shade', L:'Headphone shine' }, ex:'Color', unset:'not set',
+  colorNames:{ y:'Face', k:'Outline', e:'Eyes and mouth', B:'Headband', t:'Tongue', C:'Headphones' },
+  skins:['Classic','Pumpkin','Robot','Demon','Zombie'],
+  installing:"If your browser asks, allow it to open Headphones Guy. Nothing happened? You need version 1.1 or newer, or download the .ini and put it in the skins folder.",
+  tooBig:'This skin is too big for a link. Download the .ini and put it in the skins folder (tray → Skin → Open skins folder).',
+  saved:'Downloaded. Put it in the skins folder: tray → Skin → Open skins folder.', loaded:'Skin opened', badFile:"That doesn't look like a skin",
+  confirmReset:'Erase everything and start from the classic guy?'
+};
+const $ = id => document.getElementById(id);
+if (RU) document.documentElement.lang = 'ru';
+for (const [id, k] of [['t-title','title'],['t-back','back'],['t-tab-acc','acc'],['t-tab-colors','colors'],['t-tab-frames','frames'],['t-pen','pen'],['t-fill','fill'],['t-pick','pick'],['mirror','mirror'],['clearLayer','clear'],['t-on','on'],['t-start','start'],['t-extra','extra'],['t-real','real'],['t-name','name'],['install','install'],['download','download'],['load','load'],['reset','reset'],['beat','beat']]) $(id).textContent = L[k];
+document.title = (RU ? 'Чел в наушниках — ' : 'Headphones Guy — ') + L.title.toLowerCase();
+
+const W = await loadWasm();
+const P = new Player(W); P.loop = true;
+const FRAMES = []; for (let f = 0; f < W.hg_frame_count(); f++) { const p = W.hg_frame_name(f); let n = 0; while (new Uint8Array(W.memory.buffer, p + n, 1)[0]) n++; FRAMES.push(cstr(W, p, n)); }
+const BUILT = FRAMES.map((_, f) => Array.from({ length: 16 }, (_, r) => cstr(W, W.hg_frame_row(f, r), 16)));
+const hex = v => v.toString(16).padStart(6, '0').toUpperCase();
+const COLOR_KEYS = ['y', 'k', 'e', 'B', 't', 'C'];
+const INI_KEY = { y: 'face', k: 'outline', e: 'eyes', B: 'headband', t: 'tongue', C: 'cups' };
+
+// ---- state ----
+const blank = () => Array(16).fill('.'.repeat(16));
+function skinColors(i) { const c = {}; for (const k of COLOR_KEYS) c[k] = hex(W.hg_skin_color(i, k.charCodeAt(0))); return c; }
+function fresh() { return { name: RU ? 'Мой скин' : 'My skin', colors: skinColors(0), extra: { 1: '111111', 2: 'FFFFFF', 3: 'E53935' }, overlay: blank(), frames: {} }; }
+let S = fresh();
+try { const saved = JSON.parse(localStorage.getItem('hg-skin-draft') || 'null'); if (saved && saved.overlay) S = Object.assign(fresh(), saved); } catch (e) {}
+let tab = 'acc', tool = 'pen', mirror = true, cur = 'e', frameIdx = FRAMES.indexOf('listen'), pose = 'auto';
+const undoStack = [], redoStack = [];
+const snapshot = () => JSON.stringify(S);
+function pushUndo() { undoStack.push(snapshot()); if (undoStack.length > 200) undoStack.shift(); redoStack.length = 0; }
+function restore(json) { S = JSON.parse(json); changed(); }
+$('undo').onclick = () => { if (undoStack.length) { redoStack.push(snapshot()); restore(undoStack.pop()); } };
+$('redo').onclick = () => { if (redoStack.length) { undoStack.push(snapshot()); restore(redoStack.pop()); } };
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.target.tagName === 'INPUT') return;
+  if (e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); $('undo').click(); }
+  if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) { e.preventDefault(); $('redo').click(); }
+});
+
+// ---- the skin as an ini (same format the app reads) ----
+function toIni() {
+  let s = `[skin]\nname=${S.name.replace(/[\r\n]/g, ' ').trim() || 'My skin'}\n`;
+  for (const k of COLOR_KEYS) s += `${INI_KEY[k]}=${S.colors[k]}\n`;
+  for (let i = 1; i <= 9; i++) if (S.extra[i]) s += `${i}=${S.extra[i]}\n`;
+  const ov = S.overlay.map((r, i) => [i, r]).filter(([, r]) => r !== '.'.repeat(16));
+  if (ov.length) { s += '\n[overlay]\n'; for (const [i, r] of ov) s += `${i}=${r}\n`; }
+  let fr = '';
+  for (const [name, rows] of Object.entries(S.frames)) { const f = FRAMES.indexOf(name); rows.forEach((r, i) => { if (r !== BUILT[f][i]) fr += `${name}.${i}=${r}\n`; }); }
+  if (fr) s += '\n[frames]\n' + fr;
+  return s;
+}
+function fromIni(text) {
+  const n = fresh(); n.extra = {}; let sec = '', any = false;
+  for (let line of text.replace(/^﻿/, '').split(/\r?\n/)) {
+    line = line.trim(); if (!line || line[0] === ';' || line[0] === '#') continue;
+    if (line[0] === '[') { sec = line.slice(1, line.indexOf(']') >>> 0).trim().toLowerCase(); continue; }
+    const eq = line.indexOf('='); if (eq < 0) continue;
+    const key = line.slice(0, eq).trim().toLowerCase(); let val = line.slice(eq + 1).trim();
+    const row = v => (v.slice(0, 16).padEnd(16, '.')).replace(/[^keyBCDLt1-9]/g, '.');
+    if (sec === 'skin') {
+      if (key === 'name') { n.name = val.slice(0, 40); any = true; continue; }
+      val = val.split(';')[0].trim().replace(/^#/, '').toUpperCase(); if (!/^[0-9A-F]{6}/.test(val)) continue; val = val.slice(0, 6); any = true;
+      const k = Object.keys(INI_KEY).find(k => INI_KEY[k] === key); if (k) n.colors[k] = val; else if (/^[1-9]$/.test(key)) n.extra[key] = val;
+    } else if (sec === 'overlay') { const r = parseInt(key.replace('overlay.', ''), 10); if (r >= 0 && r < 16) { n.overlay[r] = row(val); any = true; } }
+    else if (sec === 'frames') { const d = key.lastIndexOf('.'); const nm = key.slice(0, d), r = parseInt(key.slice(d + 1), 10), f = FRAMES.indexOf(nm);
+      if (f >= 0 && r >= 0 && r < 16) { n.frames[nm] = n.frames[nm] || BUILT[f].slice(); n.frames[nm][r] = row(val); any = true; } }
+  }
+  return any ? n : null;
+}
+
+// ---- palette ----
+const PAL = ['.', 'e', 'k', 'y', 'B', 't', 'C', 'D', 'L', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+function mixHex(h, f) { const c = parseInt(h, 16); const ch = [c >> 16 & 255, c >> 8 & 255, c & 255].map(x => f <= 1 ? Math.round(x * f) : Math.round(x + (255 - x) * (f - 1))); return ch.map(x => x.toString(16).padStart(2, '0')).join(''); }
+function colorOf(ch) {
+  if (ch === '.') return null;
+  if (ch === 'C') return S.colors.C; if (ch === 'D') return mixHex(S.colors.C, 0.62); if (ch === 'L') return mixHex(S.colors.C, 1.5);
+  if (/[1-9]/.test(ch)) return S.extra[ch] || null;
+  return S.colors[ch] || null;
+}
+function drawPalette() {
+  const el = $('pal'); el.innerHTML = '';
+  for (const ch of PAL) {
+    if (/[1-9]/.test(ch) && !S.extra[ch]) continue;
+    if (tab === 'acc' && 'DL'.includes(ch)) continue;
+    const b = document.createElement('button'); b.type = 'button'; if (ch === cur) b.className = 'on';
+    const sw = document.createElement('i'); const col = colorOf(ch); if (col) sw.style.background = '#' + col; else sw.className = 'clear';
+    b.append(sw, document.createTextNode(L.pal[ch] || `${L.ex} ${ch}`));
+    b.onclick = () => { cur = ch; drawPalette(); };
+    el.append(b);
+  }
+}
+
+// ---- grid ----
+const G = $('grid'), g = G.getContext('2d'), CELL = 26;
+function layer() { return tab === 'acc' ? S.overlay : (S.frames[FRAMES[frameIdx]] || BUILT[frameIdx]); }
+function setLayer(rows) { if (tab === 'acc') S.overlay = rows; else S.frames[FRAMES[frameIdx]] = rows; }
+function drawGrid() {
+  g.fillStyle = '#121214'; g.fillRect(0, 0, G.width, G.height);
+  for (let r = 0; r < 16; r++) for (let c = 0; c < 16; c++) if ((r + c) % 2) { g.fillStyle = '#17171a'; g.fillRect(c * CELL, r * CELL, CELL, CELL); }
+  const base = S.frames[FRAMES[frameIdx]] || BUILT[frameIdx];
+  const paint = (rows, alpha) => { g.globalAlpha = alpha; for (let r = 0; r < 16; r++) for (let c = 0; c < 16; c++) { const col = colorOf(rows[r][c]); if (col) { g.fillStyle = '#' + col; g.fillRect(c * CELL, r * CELL, CELL, CELL); } } g.globalAlpha = 1; };
+  if (tab === 'acc') { paint(base, 0.4); paint(S.overlay, 1); }
+  else { paint(base, 1); paint(S.overlay, 0.35); }
+  g.strokeStyle = '#ffffff10'; g.lineWidth = 1;
+  for (let i = 0; i <= 16; i++) { g.beginPath(); g.moveTo(i * CELL + .5, 0); g.lineTo(i * CELL + .5, 16 * CELL); g.stroke(); g.beginPath(); g.moveTo(0, i * CELL + .5); g.lineTo(16 * CELL, i * CELL + .5); g.stroke(); }
+  if (mirror) { g.strokeStyle = '#ff5d7355'; g.beginPath(); g.moveTo(8 * CELL + .5, 0); g.lineTo(8 * CELL + .5, 16 * CELL); g.stroke(); }
+}
+function setCell(rows, c, r, ch) { const s = rows[r]; rows[r] = s.slice(0, c) + ch + s.slice(c + 1); }
+function apply(c, r, ch) {
+  const rows = layer().slice();
+  if (tool === 'fill') {
+    const from = rows[r][c]; if (from === ch) return;
+    const st = [[c, r]];
+    while (st.length) { const [x, y] = st.pop(); if (x < 0 || y < 0 || x > 15 || y > 15 || rows[y][x] !== from) continue; setCell(rows, x, y, ch); if (mirror) setCell(rows, 15 - x, y, ch); st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+  } else { setCell(rows, c, r, ch); if (mirror) setCell(rows, 15 - c, r, ch); }
+  setLayer(rows); changed();
+}
+let down = false, erase = false;
+function cellAt(e) { const b = G.getBoundingClientRect(); return [Math.floor((e.clientX - b.left) / b.width * 16), Math.floor((e.clientY - b.top) / b.height * 16)]; }
+G.addEventListener('contextmenu', e => e.preventDefault());
+G.addEventListener('pointerdown', e => {
+  const [c, r] = cellAt(e); if (c < 0 || r < 0 || c > 15 || r > 15) return;
+  if (tool === 'pick') { const ch = layer()[r][c]; cur = ch === '.' && tab === 'acc' ? cur : ch; drawPalette(); return; }
+  pushUndo(); down = true; erase = e.button === 2; G.setPointerCapture(e.pointerId); apply(c, r, erase ? '.' : cur);
+});
+G.addEventListener('pointermove', e => { if (!down || tool !== 'pen') return; const [c, r] = cellAt(e); if (c >= 0 && r >= 0 && c < 16 && r < 16 && layer()[r][c] !== (erase ? '.' : cur)) apply(c, r, erase ? '.' : cur); });
+G.addEventListener('pointerup', () => down = false);
+G.addEventListener('pointercancel', () => down = false);
+
+// ---- controls ----
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => { tool = b.dataset.tool; document.querySelectorAll('[data-tool]').forEach(x => x.classList.toggle('on', x === b)); });
+$('mirror').onclick = () => { mirror = !mirror; $('mirror').classList.toggle('on', mirror); drawGrid(); };
+$('clearLayer').onclick = () => { pushUndo(); if (tab === 'acc') S.overlay = blank(); else delete S.frames[FRAMES[frameIdx]]; changed(); };
+FRAMES.forEach((f, i) => $('frameSel').add(new Option(L.frameNames[f] || f, i)));
+$('frameSel').value = frameIdx;
+$('frameSel').onchange = e => { frameIdx = +e.target.value; drawGrid(); };
+function setTab(t) {
+  tab = t; document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $('paintUi').hidden = t === 'colors'; $('colorsUi').hidden = t !== 'colors';
+  $('hint').textContent = t === 'acc' ? L.hintAcc : t === 'colors' ? L.hintColors : L.hintFrames;
+  if (t === 'acc' && 'DL'.includes(cur)) cur = 'e';
+  drawPalette(); drawGrid();
+}
+document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+L.skins.forEach((n, i) => $('startSel').add(new Option(n, i)));
+$('startSel').onchange = e => { pushUndo(); S.colors = skinColors(+e.target.value); changed(); };
+function drawColorInputs() {
+  const mk = (parent, label, value, onset, onclear) => {
+    const l = document.createElement('label'); const inp = document.createElement('input'); inp.type = 'color';
+    inp.value = '#' + (value || '888888'); inp.oninput = () => onset(inp.value.slice(1).toUpperCase()); inp.onchange = () => pushUndo();
+    l.append(inp, document.createTextNode(label + (value ? '' : ` (${L.unset})`)));
+    if (onclear && value) { const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.style.padding = '0 7px'; x.onclick = e => { e.preventDefault(); onclear(); }; l.append(x); }
+    parent.append(l);
+  };
+  $('colors').innerHTML = ''; $('extras').innerHTML = '';
+  for (const k of COLOR_KEYS) mk($('colors'), L.colorNames[k], S.colors[k], v => { S.colors[k] = v; changed(false); });
+  for (let i = 1; i <= 9; i++) mk($('extras'), `${L.ex} ${i}`, S.extra[i], v => { const was = !!S.extra[i]; S.extra[i] = v; changed(!was); }, () => { pushUndo(); delete S.extra[i]; changed(); });
+}
+
+// ---- preview ----
+const POSES = { auto: null, idle: [0, 2], listen: [4, 2], loud: [5, 4], build: [7, 2], drop: [8, 2], talk: [9, 2] };
+function drawPoses() {
+  $('poses').innerHTML = '';
+  for (const k of Object.keys(POSES)) { const b = document.createElement('button'); b.type = 'button'; b.textContent = k === 'auto' ? L.auto : L.poses[k]; if (k === pose) b.className = 'on';
+    b.onclick = () => { pose = k; drawPoses(); }; $('poses').append(b); }
+}
+$('beat').onclick = async () => { P.ensure(); if (P.playing) P.pause(); else { if (!P.buf) await P.load(makeBeat(P.ctx)); else P.toggle(); pose = 'auto'; drawPoses(); } };
+P.onstate = on => $('beat').textContent = on ? L.stop : L.beat;
+function loadIntoWasm() {
+  const bytes = new TextEncoder().encode(toIni());
+  const p = W.hg_text_buf(bytes.length); new Uint8Array(W.memory.buffer, p, bytes.length).set(bytes);
+  W.hg_skin_load();
+}
+const big = $('big').getContext('2d'), small = $('small').getContext('2d');
+function frame() {
+  P.tick();
+  const cups = parseInt(S.colors.C, 16), ps = POSES[pose];
+  if (ps) { blit(W, big, W.hg_draw_pose(ps[0], ps[1], 12, cups, 5, 0), 12); blit(W, small, W.hg_draw_pose(ps[0], ps[1], 2, cups, 5, 0), 2); }
+  else { const now = P.now(), lat = P.latency(); blit(W, big, W.hg_draw(now, 12, cups, 5, 0, 1, lat, 0), 12); blit(W, small, W.hg_draw(now, 2, cups, 5, 0, 1, lat, 0), 2); }
+  requestAnimationFrame(frame);
+}
+
+// ---- output ----
+function b64url(text) { const bytes = new TextEncoder().encode(text); let bin = ''; for (const b of bytes) bin += String.fromCharCode(b); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+const LINK_MAX = 2000;
+function installLink() { return 'headphonesguy://install?skin=' + b64url(toIni()); }
+$('name').value = S.name;
+$('name').oninput = e => { S.name = e.target.value; changed(false); };
+$('install').onclick = () => { const link = installLink(); if (link.length > LINK_MAX) { $('msg').textContent = L.tooBig; return; } $('msg').textContent = L.installing; location.href = link; };
+const fileName = () => (S.name.trim() || 'skin').replace(/[^\p{L}\p{N} _-]/gu, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'skin';
+$('download').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([toIni()], { type: 'text/plain' })); a.download = fileName() + '.ini'; a.click(); URL.revokeObjectURL(a.href); $('msg').textContent = L.saved; };
+$('load').onclick = () => $('file').click();
+$('file').onchange = async e => { const f = e.target.files[0]; if (!f) return; const n = fromIni(await f.text()); if (!n) { $('msg').textContent = L.badFile; return; } pushUndo(); S = n; $('name').value = S.name; changed(); $('msg').textContent = L.loaded; e.target.value = ''; };
+$('reset').onclick = () => { if (!confirm(L.confirmReset)) return; pushUndo(); S = fresh(); $('name').value = S.name; changed(); };
+
+function changed(full = true) {
+  try { localStorage.setItem('hg-skin-draft', JSON.stringify(S)); } catch (e) {}
+  loadIntoWasm(); drawGrid();
+  if (full) { drawPalette(); drawColorInputs(); }
+  $('install').disabled = false;
+  $('install').title = installLink().length > LINK_MAX ? L.tooBig : '';
+}
+window.editor = { toIni, fromIni, get state() { return S; }, setCell: (c, r, ch) => apply(c, r, ch), setTab, setPose: p => { pose = p; drawPoses(); } };
+drawPoses(); setTab('acc'); changed();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

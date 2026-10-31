@@ -27,7 +27,7 @@ He sits next to your tray icons and listens to the sound your PC is putting out,
 - **Built for fast music**: tuned on hardcore, uptempo, terror, breakcore, DnB, neurofunk and dubstep. Handles **130–300 BPM**, including the nasty 130-vs-260 and 3:4 polyrhythm cases.
 - **Knows the song structure**: nods deeper on loud parts, chills on breakdowns, shivers during build-up snare rolls, and **loses it on the drop**, for the whole drop rather than just a second.
 - **Has a life**: headphones around his neck when nothing plays, blinks, wakes up when music starts. Sweats at 270+ BPM, steams out of his ears near 300, and falls asleep at night when it's quiet.
-- **Skins and hats**: five built-in skins (classic, pumpkin, robot, demon, zombie) plus your own from a tiny text file ([how](docs/SKINS.md)). A witch hat for Halloween week and a Santa hat for the New Year show up by themselves.
+- **Skins and hats**: five built-in skins (classic, pumpkin, robot, demon, zombie), plus your own drawn in the **[skin editor](https://kondrati0.github.io/headphones-guy/editor.html)**, which installs them into the app in one click ([more](docs/SKINS.md)). A witch hat for Halloween week and a Santa hat for the New Year show up by themselves.
 - **A guy per app**: give Spotify its own guy, or Discord one that talks along when people speak (Windows 10 2004+).
 - **Stream window**: a big guy on a green background, for OBS window capture with a chroma key.
 - **RGB in the beat**: your keyboard, mouse and strips flash the headphone color on every beat through [OpenRGB](https://openrgb.org).
@@ -64,7 +64,7 @@ To quit, change settings or make him start with Windows, **click his icon in the
 | Move left / Move right / Reset position | Nudge him along the taskbar if he overlaps something |
 | Nod earlier / later (±10 ms, ±50 ms) | Sync the nod to your ears. **Bluetooth headphones** are usually 150–250 ms late, so use *Much later* a few times |
 | Headphone color | 8 presets or any custom color |
-| Skin | Built-in skins, your own from the skins folder, and *Open skins folder...* to make one |
+| Skin | Built-in skins, your own from the skins folder, *Draw a skin...* (opens the web editor) and *Open skins folder...* |
 | Hat | By the date (default), no hat, or any hat all year |
 | Go harder on loud parts and drops | Turn the dynamic moves (deep nods, drop face, build-up shiver) on or off |
 | Tempo easter eggs | Sweat, steam and sleeping at night |
