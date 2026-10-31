@@ -1,5 +1,6 @@
 // Shared by the demo and the skin editor: the wasm module, a generated beat and a player that feeds the tracker.
-export const RU = /^ru/i.test(navigator.language || '');
+// English for everyone; Russian only when asked for with ?lang=ru
+export const RU = new URLSearchParams(location.search).get('lang') === 'ru';
 
 export async function loadWasm() {
   const r = await WebAssembly.instantiateStreaming(fetch('guy.wasm'), { wasi_snapshot_preview1: new Proxy({}, { get: () => () => 0 }) });
