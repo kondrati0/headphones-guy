@@ -10,7 +10,7 @@
 <p align="center">
   <a href="../../releases/latest"><img alt="Download" src="https://img.shields.io/badge/download-HeadphonesGuy.exe-ff5d73?style=for-the-badge"></a>
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-3d7dff?style=for-the-badge">
-  <img alt="Size" src="https://img.shields.io/badge/size-~800%20KB-ffc83d?style=for-the-badge">
+  <img alt="Size" src="https://img.shields.io/badge/size-~300%20KB-ffc83d?style=for-the-badge">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-c8ccd6?style=for-the-badge">
 </p>
 
@@ -26,7 +26,7 @@ He sits next to your tray icons and listens to the sound your PC is putting out,
 - **Built for fast music**: tuned on hardcore, uptempo, terror, breakcore, DnB, neurofunk and dubstep. Handles **130–300 BPM**, including the nasty 130-vs-260 and 3:4 polyrhythm cases.
 - **Knows the song structure**: nods deeper on loud parts, chills on breakdowns, shivers during build-up snare rolls, and **loses it on the drop**, for the whole drop rather than just a second.
 - **Has a life**: headphones around his neck when nothing plays, blinks, wakes up when music starts.
-- **Featherweight**: one ~800 KB `.exe`, no installer, no dependencies, ~2% of one CPU core.
+- **Featherweight**: one ~300 KB `.exe`, no installer, no dependencies, ~2% of one CPU core.
 - **Private**: no network access at all. Audio is analysed in memory and thrown away.
 
 <p align="center">

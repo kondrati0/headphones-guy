@@ -80,15 +80,24 @@ Song chaos(double bpm, double len) {
     addPad(g.s, 0, len, 0.08); return g;
 }
 int main() {
+    int fail = 0;
     for (double bpm : {170.0, 180.0, 200.0}) {
         Song g = chaos(bpm, 45); BeatTracker tr; tr.init(SR); double clock = 0; size_t bi = 0; int good = 0, tot = 0, wrongT = 0, frames = 0;
         for (size_t i = 0; i + 480 <= g.s.size(); i += 480) {
             tr.feed(&g.s[i], 480, clock); clock += 0.01; GuyStatus st = tr.status(clock);
             if (clock > 8) { frames++; if (st.mode == MODE_NOD && fabs(st.bpm / bpm - 1) > 0.03) wrongT++; }
-            while (bi < g.beats.size() && g.beats[bi] <= clock - 0.05) { double tb = g.beats[bi++]; if (tb < 8) continue; tot++;
-                if (st.mode != MODE_NOD) continue; double k = floor((tb - st.gridT0) / st.period + 0.5), e = tb - (st.gridT0 + k * st.period);
+            while (bi < g.beats.size() && g.beats[bi] <= clock - 0.05) {
+                double tb = g.beats[bi++];
+                if (tb < 8) continue;
+                tot++;
+                if (st.mode != MODE_NOD) continue;
+                double k = floor((tb - st.gridT0) / st.period + 0.5), e = tb - (st.gridT0 + k * st.period);
                 if (fabs(e) < 0.035 && fabs(st.bpm / bpm - 1) < 0.02) good++; }
         }
-        printf("chaos %.0f: onbeat %d%%  wrong-tempo nod %d%% of time\n", bpm, 100 * good / tot, 100 * wrongT / frames);
+        int onbeat = 100 * good / tot, wrong = 100 * wrongT / frames;
+        printf("chaos %.0f: onbeat %d%%  wrong-tempo nod %d%% of time\n", bpm, onbeat, wrong);
+        // triplet rolls must not drag the tempo away
+        if (onbeat < 90 || wrong > 2) { printf("  FAIL chaos %.0f: onbeat < 90%% or wrong tempo > 2%%\n", bpm); fail++; }
     }
+    return fail ? 1 : 0;
 }

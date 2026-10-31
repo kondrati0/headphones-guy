@@ -7,7 +7,7 @@ A tiny pixel smiley that sits on your Windows taskbar and nods to whatever you'r
 - Nods on the beat of any audio your PC plays: Spotify, YouTube, games, DJ software
 - Tuned for fast music: hardcore, uptempo, terror, breakcore, DnB, dubstep (130–300 BPM)
 - Goes harder on loud parts, shivers on build-ups, loses it on drops
-- ~800 KB, ~2% of one CPU core, no network access
+- ~300 KB, ~2% of one CPU core, no network access
 
 Click his tray icon for settings: position, nod timing (handy for Bluetooth), headphone color, start with Windows.
 

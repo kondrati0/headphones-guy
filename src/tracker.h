@@ -75,7 +75,7 @@ private:
 
 class BeatTracker {
 public:
-    // tuning (see sim.py)
+    // tuning (values found offline on real tracks, checked by tests/)
     double minBpm = 70, maxBpm = 300, priorCenter = 170, priorSigmaOct = 0.6;
     double lockConf = 0.21, lowConfThr = 0.10, fasterRatio = 0.75;
     double winSec = 6.0, tempoMemSec = 16.0, phaseMemSec = 24.0, thetaGain = 0.3;
@@ -336,7 +336,7 @@ private:
         double dq = (bphi - combTgt) / P; dq -= floor(dq + 0.5);
         // clearly better beat position elsewhere, and not the on/off-beat tie that dense kicks produce
         if (fabs(dph) > 0.12 && best > 1e-9 && cur < 0.5 * best && (combBad == 0 || fabs(dq) < 0.06)) {
-            if (combBad == 0) combTgt = bphi; else combTgt = bphi;
+            combTgt = bphi;
             if (++combBad >= 6) { combBad = 0; backfill(std::min(W, (int)(fps * 2.5))); thetaFresh = true; phaseJumps++; }
         } else combBad = 0;
     }

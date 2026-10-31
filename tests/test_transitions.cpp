@@ -65,7 +65,9 @@ Song make(const std::string& name, double bpm, double len, double off = 0, doubl
 
 struct Res { int good = 0, tot = 0; double tOk = -1; };
 // play songs one after another (xfade seconds of overlap), score beats >= skip s after each start
-void run(const char* title, std::vector<Song> songs, double xfade, double skip) {
+static int g_fail = 0;
+// minTotal: floor for the whole scenario, minSong: floor for any single track in it (a bit under the current numbers)
+void run(const char* title, std::vector<Song> songs, double xfade, double skip, int minTotal, int minSong) {
     std::vector<float> mix; std::vector<std::vector<double>> beats; std::vector<double> starts, bpms;
     double pos = 1.0; mix.assign((size_t)(SR * 1.0), 0.f);
     for (auto& g : songs) {
@@ -107,14 +109,22 @@ void run(const char* title, std::vector<Song> songs, double xfade, double skip) 
         }
     }
     printf("== %s\n", title); int G = 0, T = 0;
-    for (size_t s = 0; s < songs.size(); s++) { printf("  %-10s %5.1f  onbeat %3d%%  ok@%5.2fs\n", songs[s].name.c_str(), songs[s].bpm, R[s].tot ? 100 * R[s].good / R[s].tot : 0, R[s].tOk); G += R[s].good; T += R[s].tot; }
-    printf("  TOTAL %d%%\n", T ? 100 * G / T : 0);
+    for (size_t s = 0; s < songs.size(); s++) {
+        int pct = R[s].tot ? 100 * R[s].good / R[s].tot : 0;
+        printf("  %-10s %5.1f  onbeat %3d%%  ok@%5.2fs\n", songs[s].name.c_str(), songs[s].bpm, pct, R[s].tOk); G += R[s].good; T += R[s].tot;
+        if (pct < minSong) { printf("  FAIL %s: onbeat < %d%%\n", songs[s].name.c_str(), minSong); g_fail++; }
+    }
+    int total = T ? 100 * G / T : 0;
+    printf("  TOTAL %d%%\n", total);
+    if (total < minTotal) { printf("  FAIL total < %d%%\n", minTotal); g_fail++; }
 }
 int main() {
     auto set = [] { return std::vector<Song>{ make("ukg", 132, 25), make("trance", 140, 25), make("dnb", 174, 25), make("breakcore", 180, 25),
                                 make("hardcore", 200, 25), make("uptempo", 230, 25), make("terror", 260, 25) }; };
-    run("back to back, score from 4s", set(), 0, 4);
-    run("crossfade 4s, score from 4s", set(), 4, 4);
-    run("same tempo, shifted half beat", { make("dnb", 174, 25), make("dnb", 174, 25, 0.1724), make("hardcore", 200, 25), make("hardcore", 200, 25, 0.15) }, 0, 4);
-    run("breakdown 15-25s then drop", { make("dnb", 174, 45, 0, 15, 25), make("hardcore", 200, 45, 0, 15, 25), make("breakcore", 180, 45, 0, 15, 25) }, 0, 4);
+    run("back to back, score from 4s", set(), 0, 4, 88, 75);
+    run("crossfade 4s, score from 4s", set(), 4, 4, 78, 65);
+    run("same tempo, shifted half beat", { make("dnb", 174, 25), make("dnb", 174, 25, 0.1724), make("hardcore", 200, 25), make("hardcore", 200, 25, 0.15) }, 0, 4, 95, 90);
+    run("breakdown 15-25s then drop", { make("dnb", 174, 45, 0, 15, 25), make("hardcore", 200, 45, 0, 15, 25), make("breakcore", 180, 45, 0, 15, 25) }, 0, 4, 85, 70);
+    if (g_fail) printf("%d check(s) failed\n", g_fail);
+    return g_fail ? 1 : 0;
 }

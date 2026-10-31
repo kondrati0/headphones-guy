@@ -67,9 +67,9 @@ static void LoadSettings() {
     g_set.latencyMs = (int)GetPrivateProfileIntW(L"guy", L"nod_offset_ms", 10, f);
     g_set.log = GetPrivateProfileIntW(L"guy", L"log", 0, f) != 0;
     g_set.sharp = GetPrivateProfileIntW(L"guy", L"sharp_onsets", 1, f) != 0;   // 0 = old 2048-window onset timing
-    g_set.moves = GetPrivateProfileIntW(L"guy", L"moves", 1, f) != 0;
+    g_set.moves = GetPrivateProfileIntW(L"guy", L"moves", 1, f) != 0;                 // 0 = plain nods, no drop face / loudness
     wchar_t lang[16]; GetPrivateProfileStringW(L"guy", L"language", L"auto", lang, 16, f);
-    if (!wcscmp(lang, L"en")) g_ru = false; else if (!wcscmp(lang, L"ru")) g_ru = true;          // 0 = plain nods, no drop face / loudness
+    if (!wcscmp(lang, L"en")) g_ru = false; else if (!wcscmp(lang, L"ru")) g_ru = true;
     wchar_t buf[32];
     GetPrivateProfileStringW(L"guy", L"cups_color", L"FF5D73", buf, 32, f);
     g_set.cups = wcstoul(buf, NULL, 16) & 0xFFFFFF;
@@ -377,6 +377,8 @@ static void SetAutoStart(bool on) {
     } else RegDeleteValueW(k, L"HeadphonesGuy");
     RegCloseKey(k);
 }
+// the exe was moved since autostart was turned on: point the Run entry at where it lives now
+static void FixAutoStartPath() { if (AutoStartOn()) SetAutoStart(true); }
 
 // ---------- tray ----------
 static void WriteLog() {
@@ -522,6 +524,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, LPWSTR, int) {
     LoadSettings();
     g_tracker.sharpOnsets = g_set.sharp;
     WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
+    FixAutoStartPath();
 
     WNDCLASSEXW wc = {sizeof(wc)};
     wc.lpfnWndProc = OverlayProc; wc.hInstance = inst; wc.lpszClassName = L"HeadphonesGuyOverlay"; wc.hCursor = LoadCursor(NULL, IDC_ARROW);

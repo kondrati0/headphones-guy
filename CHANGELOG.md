@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- The exe is stripped: ~290 KB instead of ~830 KB.
+- "Start with Windows" keeps working after you move the exe: the autostart entry follows it on the next launch.
+- Tracker tests now fail (and break CI) when beat accuracy drops below set floors.
+- Small code cleanups.
+
 ## 1.0.0 — first public release
 
 - Real-time beat tracking from the Windows output (WASAPI loopback), 70–300 BPM, tuned for 130–300.
