@@ -1,0 +1,8 @@
+build/
+*.o
+*.exe
+*.f32
+*.beats
+tests/t
+tests/test_seek
+tests/eval
