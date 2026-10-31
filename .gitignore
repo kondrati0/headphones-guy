@@ -6,3 +6,4 @@ build/
 tests/t
 tests/test_seek
 tests/eval
+web/guy.wasm

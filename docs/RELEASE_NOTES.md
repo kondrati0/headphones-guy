@@ -1,20 +1,19 @@
-## Headphones Guy 1.0.1
+## Headphones Guy 1.1.0
 
 A tiny pixel smiley that sits on your Windows taskbar and nods to whatever you're playing.
 
-**Download `HeadphonesGuy.exe` below and run it. No installer, no dependencies.**
+**Download `HeadphonesGuy.exe` below and run it. No installer, no dependencies.** Not sure yet? [Try him in the browser](https://kondrati0.github.io/headphones-guy/) first.
 
 ### What's new
-- The exe is about three times smaller: ~290 KB instead of ~830 KB.
-- "Start with Windows" keeps working after you move the exe to another folder: the autostart entry follows it on the next launch.
-- Tracker tests now fail the build when beat accuracy gets worse, so regressions can't slip into a release.
+- **Skins**: classic, pumpkin, robot, demon, zombie, or draw your own in a tiny text file ([guide](https://github.com/kondrati0/headphones-guy/blob/main/docs/SKINS.md)).
+- **Seasonal hats**: a witch hat for Halloween week and a Santa hat for the New Year, on by themselves.
+- **Tempo easter eggs**: he sweats at 270+ BPM, steams out of his ears near 300 and falls asleep at night.
+- **A guy per app**: give Spotify its own guy, or Discord one that talks along (Windows 10 2004+).
+- **Stream window for OBS**: big guy and BPM on a green background.
+- **RGB in the beat** through OpenRGB.
+- **Monthly stats card** you can post: hours, average tempo, drops survived, top tempo.
+- Optional nodding tray icon.
 
-### In case you're new here
-- Nods on the beat of any audio your PC plays: Spotify, YouTube, games, DJ software
-- Tuned for fast music: hardcore, uptempo, terror, breakcore, DnB, dubstep (130–300 BPM)
-- Goes harder on loud parts, shivers on build-ups, loses it on drops
-- ~300 KB, ~2% of one CPU core, no network access
-
-Click his tray icon for settings: position, nod timing (handy for Bluetooth), headphone color, start with Windows.
+Everything new is in the tray menu. Click his tray icon.
 
 > Windows SmartScreen may warn on first launch because the exe isn't code-signed: **More info → Run anyway**.
