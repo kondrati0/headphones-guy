@@ -60,6 +60,10 @@ Song make(const std::string& name, double bpm, double len) {
     return g;
 }
 
+// regression floors: a bit under the current numbers, so CI fails when the tracker gets worse
+static int g_fail = 0;
+static void expect(bool ok, const char* what, const std::string& name) { if (!ok) { printf("  FAIL %s: %s\n", name.c_str(), what); g_fail++; } }
+
 int main() {
     std::vector<Song> songs = { make("ukg", 132, 25), make("trance", 140, 25), make("dnb", 174, 25), make("breakcore", 180, 25),
                                 make("hardcore", 200, 25), make("uptempo", 230, 25), make("terror", 260, 25) };
@@ -77,7 +81,8 @@ int main() {
                 GuyStatus st = tr.status(clock); modeCount[st.mode]++;
                 if (st.mode == MODE_NOD && tLock < 0) tLock = clock - start;
                 bool ok = st.locked && fabs(st.bpm / g.bpm - 1) < 0.02;
-                if (ok && tOk < 0) tOk = clock - start; if (!ok) tOk = -1;
+                if (ok && tOk < 0) tOk = clock - start;
+                if (!ok) tOk = -1;
                 while (bi < g.beats.size() && start + g.beats[bi] <= clock - 0.05) {
                     double tb = start + g.beats[bi++]; if (tb - start < 8) continue;
                     tot++; if (!st.locked) continue;
@@ -91,6 +96,10 @@ int main() {
             printf("%-10s true %5.1f  got %6.1f  lock@%5.2fs  onbeat %3d%%  meanErr %5.1fms  conf %.2f  modes S%d A%d L%d N%d P%d\n",
                    g.name.c_str(), g.bpm, lastBpm, tLock, tot ? 100 * good / tot : 0, tot ? 1000 * errSum / tot : 0, tr.lastConf,
                    modeCount[0], modeCount[1], modeCount[2], modeCount[3], modeCount[4]);
+            expect(fabs(lastBpm / g.bpm - 1) < 0.02, "wrong tempo at the end", g.name);
+            expect(tot && 100 * good / tot >= 85, "onbeat < 85%", g.name);
         }
     }
+    if (g_fail) printf("%d check(s) failed\n", g_fail);
+    return g_fail ? 1 : 0;
 }
